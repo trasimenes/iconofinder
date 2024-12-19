@@ -107,6 +107,11 @@ app = Flask(__name__)
 def home():
     return render_template("index.html", results=final_results)
 
+@app.route("/")
+def home():
+    return "Hello, Render!"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    # Utilisez le port fourni par Render ou 8080 par défaut
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
