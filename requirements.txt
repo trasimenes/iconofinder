@@ -1,3 +1,4 @@
 flask
 requests
 opencv-python
+beautifulsoup4
