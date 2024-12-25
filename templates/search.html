@@ -28,6 +28,7 @@
                 <label for="country" class="form-label">Choisissez un pays :</label>
                 <select id="country" name="country" class="form-select" required>
                     <option value="">Sélectionnez un pays</option>
+                    <option value="Tous">Tous les pays</option>
                     {% for country in parcs.keys() %}
                         <option value="{{ country }}">{{ country }}</option>
                     {% endfor %}
@@ -51,37 +52,41 @@
     </div>
 
     <script>
-        // Récupération des données des parcs passées par Flask
-        const parcs = {{ parcs | tojson }};
-        const countrySelect = document.getElementById('country');
-        const parcSelect = document.getElementById('parc');
-
-        // Débogage : afficher les données dans la console
-        console.log("Données des parcs :", parcs);
-
-        // Mettre à jour la liste des parcs en fonction du pays sélectionné
-        countrySelect.addEventListener('change', function () {
-            const selectedCountry = countrySelect.value;
-            parcSelect.innerHTML = '<option value="">Sélectionnez un parc</option>';
-            
-            // Si le pays sélectionné contient des parcs
-            if (selectedCountry && parcs[selectedCountry]) {
-                const parcList = Object.keys(parcs[selectedCountry]);
-                if (parcList.length > 0) {
-                    parcList.forEach(parc => {
+        document.addEventListener('DOMContentLoaded', function () {
+            const countrySelect = document.getElementById('country');
+            const parcSelect = document.getElementById('parc');
+    
+            const parcs = {{ parcs | safe }}; // Récupère les données des parcs du serveur
+    
+            countrySelect.addEventListener('change', function () {
+                const selectedCountry = this.value;
+    
+                // Réinitialise les options de la liste des parcs
+                parcSelect.innerHTML = '<option value="" disabled selected>Choisissez un parc</option>';
+    
+                if (selectedCountry === "Tous") {
+                    // Cas : Tous les pays
+                    parcSelect.innerHTML += '<option value="Tous">Tous les parcs</option>';
+                    parcSelect.disabled = false; // Active la liste déroulante
+                } else if (parcs[selectedCountry]) {
+                    // Cas : Pays spécifique
+                    parcSelect.innerHTML += '<option value="Tous">Tous les parcs</option>';
+                    Object.keys(parcs[selectedCountry]).forEach(function (parc) {
                         const option = document.createElement('option');
                         option.value = parc;
                         option.textContent = parc;
                         parcSelect.appendChild(option);
                     });
+                    parcSelect.disabled = false; // Active la liste déroulante
                 } else {
-                    const option = document.createElement('option');
-                    option.value = "";
-                    option.textContent = "Aucun parc disponible";
-                    parcSelect.appendChild(option);
+                    // Cas : Aucun pays valide sélectionné
+                    parcSelect.disabled = true; // Désactive la liste déroulante
                 }
-            }
+            });
         });
     </script>
+    
+    
+    
 </body>
 </html>

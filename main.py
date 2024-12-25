@@ -70,41 +70,61 @@ def recherche():
     return render_template('search.html', parcs=parcs)
 
 
+from concurrent.futures import ThreadPoolExecutor
+
 @app.route('/results', methods=['GET'])
 def results():
-    try:
-        # Récupérer les données du formulaire
-        country = request.args.get('country')
-        parc = request.args.get('parc')
+    # Récupérer les données du formulaire
+    country = request.args.get('country')
+    parc = request.args.get('parc')
 
-        print(f"DEBUG: Country = {country}, Parc = {parc}")
+    if not country or not parc:
+        return "Pays ou parc non spécifié."
 
-        if not country or not parc:
-            return "Pays ou parc non spécifié."
+    final_results = {}
 
-        # Récupérer l'URL du parc sélectionné
+    # Cas où tous les pays sont sélectionnés
+    if country == "Tous" and parc == "Tous":
+        for country_name, parks in parcs.items():
+            final_results[country_name] = {}
+            for parc_name, parc_url in parks.items():
+                activities = get_activities_with_placeholders(parc_url)
+                final_results[country_name][parc_name] = activities
+
+    # Cas où un pays spécifique est sélectionné avec tous les parcs
+    elif parc == "Tous":
+        if country in parcs:
+            final_results[country] = {}
+            for parc_name, parc_url in parcs[country].items():
+                activities = get_activities_with_placeholders(parc_url)
+                final_results[country][parc_name] = activities
+
+    # Cas où un pays et un parc spécifique sont sélectionnés
+    else:
         parc_url = parcs.get(country, {}).get(parc)
-
-        print(f"DEBUG: Parc URL = {parc_url}")
-
         if not parc_url:
             return "Parc ou URL invalide."
 
-        # Scraper les données
+        activities = get_activities_with_placeholders(parc_url)
+        final_results[country] = {parc: activities}
+
+    # Vérification des résultats
+    print(f"DEBUG: Final Results = {final_results}")
+
+    # Renvoyer les résultats au template
+    return render_template('results.html', results=final_results)
+
+
+# Fonction pour extraire les activités avec placeholders
+def get_activities_with_placeholders(parc_url):
+    placeholder_base_url = "https://static.centerparcs.com/"
+    placeholder_image_suffix = "/assets/images/default/500x375.jpg"
+
+    try:
         response = requests.get(parc_url)
-        print(f"DEBUG: Request status code = {response.status_code}")
-
         response.raise_for_status()
-
         soup = BeautifulSoup(response.content, 'html.parser')
         activity_blocks = soup.find_all('a', class_='js-Tracking--link')
-
-        print(f"DEBUG: Found {len(activity_blocks)} activity blocks")
-
-        # Filtrer les activités avec un placeholder
-        placeholder_base_url = "https://static.centerparcs.com/"
-        placeholder_image_suffix = "/assets/images/default/500x375.jpg"
-
         activities_with_placeholder = [
             activity.find('p', class_='h4-like').text.strip()
             for activity in activity_blocks
@@ -114,20 +134,10 @@ def results():
                 for img in activity.find_all('img')
             )
         ]
-
-        print(f"DEBUG: Activities with placeholders = {activities_with_placeholder}")
-
-        # Construire les résultats
-        results = {country: {parc: activities_with_placeholder}}
-
-        print(f"DEBUG: Results = {results}")
-
-        return render_template('results.html', results=results)
+        return activities_with_placeholder if activities_with_placeholder else ["Aucune activité trouvée."]
     except Exception as e:
-        # Afficher le traceback complet pour faciliter le débogage
-        print("DEBUG: Exception occurred:")
-        traceback.print_exc()
-        return f"Erreur lors du scraping : {e}"
+        print(f"Erreur lors du scraping : {e}")
+        return ["Erreur lors du scraping."]
 
 
 if __name__ == "__main__":
