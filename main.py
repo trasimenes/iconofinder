@@ -1,11 +1,20 @@
 import os
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect, url_for
 import requests
 from bs4 import BeautifulSoup
-import traceback
-
+import json
 
 app = Flask(__name__)
+
+# Clé secrète pour les sessions
+app.secret_key = "/Xfn,MN~s}.;q1M1'Om`YD;x_-<ACZ"
+
+# Charger les traductions
+def load_translations():
+    with open("translations/translations.json", "r", encoding="utf-8") as file:
+        return json.load(file)
+
+translations = load_translations()
 
 # Données des parcs par pays
 parcs = {
@@ -49,41 +58,39 @@ parcs = {
     }
 }
 
+# Fonction pour récupérer la traduction selon la langue active
+def get_translation(key):
+    lang = session.get("lang", "fr")  # Par défaut, français
+    return translations.get(lang, {}).get(key, key)  # Retourne la clé si elle n'est pas trouvée
 
-
-
-# Créer l'application Flask
-app = Flask(__name__)
-
-# Définir les URLs du placeholder
-placeholder_base_url = "https://static.centerparcs.com"
-placeholder_image_suffix = "/common/assets/images/default/500x375.jpg"
+# Route pour changer la langue
+@app.route("/set_language/<lang>")
+def set_language(lang):
+    if lang in translations:
+        session["lang"] = lang  # Stocke la langue sélectionnée dans la session
+    return redirect(request.referrer or url_for("home"))  # Recharge la page précédente ou renvoie à la page d'accueil
 
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('home.html', translate=get_translation)
 
+    
 
 @app.route('/recherche')
 def recherche():
-    return render_template('search.html', parcs=parcs)
-
-
-from concurrent.futures import ThreadPoolExecutor
+    return render_template('search.html', parcs=parcs, t=get_translation)
 
 @app.route('/results', methods=['GET'])
 def results():
-    # Récupérer les données du formulaire
     country = request.args.get('country')
     parc = request.args.get('parc')
 
     if not country or not parc:
-        return "Pays ou parc non spécifié."
+        return get_translation("error_missing_params")
 
     final_results = {}
 
-    # Cas où tous les pays sont sélectionnés
     if country == "Tous" and parc == "Tous":
         for country_name, parks in parcs.items():
             final_results[country_name] = {}
@@ -91,7 +98,6 @@ def results():
                 activities = get_activities_with_placeholders(parc_url)
                 final_results[country_name][parc_name] = activities
 
-    # Cas où un pays spécifique est sélectionné avec tous les parcs
     elif parc == "Tous":
         if country in parcs:
             final_results[country] = {}
@@ -99,23 +105,17 @@ def results():
                 activities = get_activities_with_placeholders(parc_url)
                 final_results[country][parc_name] = activities
 
-    # Cas où un pays et un parc spécifique sont sélectionnés
     else:
         parc_url = parcs.get(country, {}).get(parc)
         if not parc_url:
-            return "Parc ou URL invalide."
+            return get_translation("error_invalid_park_url")
 
         activities = get_activities_with_placeholders(parc_url)
         final_results[country] = {parc: activities}
 
-    # Vérification des résultats
-    print(f"DEBUG: Final Results = {final_results}")
+    return render_template('results.html', results=final_results, translate=get_translation)
 
-    # Renvoyer les résultats au template
-    return render_template('results.html', results=final_results)
-
-
-# Fonction pour extraire les activités avec placeholders
+# Fonction pour scraper les activités avec placeholders
 def get_activities_with_placeholders(parc_url):
     placeholder_base_url = "https://static.centerparcs.com/"
     placeholder_image_suffix = "/assets/images/default/500x375.jpg"
@@ -134,11 +134,10 @@ def get_activities_with_placeholders(parc_url):
                 for img in activity.find_all('img')
             )
         ]
-        return activities_with_placeholder if activities_with_placeholder else ["Aucune activité trouvée."]
+        return activities_with_placeholder if activities_with_placeholder else [get_translation("no_activities_found")]
     except Exception as e:
         print(f"Erreur lors du scraping : {e}")
-        return ["Erreur lors du scraping."]
-
+        return [get_translation("scraping_error")]
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
