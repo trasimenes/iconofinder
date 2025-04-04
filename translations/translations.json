@@ -9,6 +9,9 @@
       "choose_search_type": "Choose the type to search",
       "activities": "Activities",
       "accommodations": "Accommodations",
+      "accommodations_search": "Cottage search",
+      "activities_search": "Activities search",
+      "display_details": "Display details",
       "choose_parc": "Choose a park:",
       "select_parc": "Choose a park",
       "search_type": "Search type:",
@@ -24,10 +27,16 @@
       "all_countries": "All countries",
       "all_parcs": "All parks",
       "no_results": "No activities found for this park.",
+      "no_accommodations_results": "No accommodations found for this park.",
       "results_header": "Search results:",
-      "results_subheader": "Heare a the results of the search:"
-
-
+      "results_subheader": "Here are the results of the search:",
+      "no_activities_found": "No activities found for this park",
+      "no_accommodations_found": "No accommodations found for this park",
+      "no_missing_photos": "No missing photos",
+      "error_occurred": "An error occurred",
+      "missing_photos": "Missing photos",
+      "photos_missing": "Photos missing",
+      "photos_ok": "Photos OK"
     },
     "fr": {
       "welcome_message": "Bienvenue sur l'Iconofinder de Center Parcs",
@@ -39,8 +48,11 @@
       "choose_parc": "Choisissez un parc :",
       "select_parc":"Choisissez un parc :",
       "choose_search_type": "Choisissez le type à rechercher",
-      "activities": "Activité",
-      "accommodations": "Hébergement",
+      "activities": "Activités",
+      "accommodations": "Hébergements",
+      "accommodations_search": "Recherche d'hébergements",
+      "activities_search": "Recherche d'activités",
+      "display_details": "Afficher les détails",
       "search_type": "Type de recherche :",
       "search_button": "Rechercher",
       "activities_results_title": "Résultats des photos manquantes d'Activités",
@@ -54,7 +66,15 @@
       "all_countries": "Tous les pays",
       "all_parcs": "Tous les parcs",
       "no_results": "Aucune activité trouvée pour ce parc.",
+      "no_accommodations_results": "Aucun hébergement trouvé pour ce parc.",
       "results_header": "Résultats de la recherche :",
-      "results_subheader": "Voici les résultats de recherche :"
+      "results_subheader": "Voici les résultats de recherche :",
+      "no_activities_found": "Aucune activité trouvée pour ce parc",
+      "no_accommodations_found": "Aucun hébergement trouvé pour ce parc",
+      "no_missing_photos": "Aucune photo manquante",
+      "error_occurred": "Une erreur est survenue",
+      "missing_photos": "Photos manquantes",
+      "photos_missing": "Photos manquantes",
+      "photos_ok": "Photos OK"
     }
   }
