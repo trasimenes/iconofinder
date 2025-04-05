@@ -25,7 +25,7 @@ class ActivityService:
         print(f"URL: {parc_url}")
         
         try:
-            response = self.session.get(parc_url)
+            response = self.session.get(parc_url, timeout=30)  # Ajout d'un timeout de 30 secondes
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -95,12 +95,34 @@ class ActivityService:
                 'no_missing_photos': no_missing_photos
             }
             
-        except Exception as e:
-            print(f"Erreur lors de l'analyse des activités: {str(e)}")
+        except requests.exceptions.ConnectionError as e:
+            print(f"Erreur de connexion: {str(e)}")
             return {
                 'activities': [],
-                'no_missing_photos': True,
-                'error': str(e)
+                'no_missing_photos': False,
+                'error': "Impossible de se connecter au site. Veuillez réessayer plus tard."
+            }
+        except requests.exceptions.Timeout as e:
+            print(f"Timeout de la connexion: {str(e)}")
+            return {
+                'activities': [],
+                'no_missing_photos': False,
+                'error': "Le site met trop de temps à répondre. Veuillez réessayer plus tard."
+            }
+        except requests.exceptions.RequestException as e:
+            print(f"Erreur lors de la requête: {str(e)}")
+            return {
+                'activities': [],
+                'no_missing_photos': False,
+                'error': "Une erreur s'est produite lors de la connexion au site."
+            }
+        except Exception as e:
+            error_msg = f"Erreur lors de l'analyse: {str(e)}"
+            print(f"❌ {error_msg}")
+            return {
+                'activities': [],
+                'no_missing_photos': False,
+                'error': error_msg
             }
 
     def get_housings_with_placeholders(self, parc_url):
