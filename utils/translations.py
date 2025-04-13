@@ -10,5 +10,5 @@ translations = load_translations()
 
 def get_translation(key):
     """Get translation for a given key in the current language."""
-    lang = session.get("lang", "fr")
+    lang = session.get("language", "fr")
     return translations.get(lang, {}).get(key, key) 

@@ -1,9 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ session.get('language', 'fr') }}">
 <head>
-    <title>Test Index</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IconoFinder - Center Parcs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
-    <h1>Bienvenue sur votre application Flask</h1>
+    <nav class="navbar">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Nyan Cat" class="nyan-cat">
+            </a>
+            <div class="switch" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
+                <div class="switch-labels">
+                    <span class="fr">FR</span>
+                    <span class="en">EN</span>
+                </div>
+                <div class="switch-handle"></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <h1 data-translate="welcome_title">{{ translate('welcome_title') }}</h1>
+        <p class="lead" data-translate="welcome_subtitle">{{ translate('welcome_subtitle') }}</p>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h2 class="card-title" data-translate="search_title">{{ translate('search_title') }}</h2>
+
+                <form action="/results" method="GET">
+                    <div class="mb-3">
+                        <label for="country" class="form-label" data-translate="select_country">{{ translate('select_country') }}</label>
+                        <select class="form-select" id="country" name="country" required>
+                            <option value="" data-translate="choose_country">{{ translate('choose_country') }}</option>
+                            {% for country in countries %}
+                            <option value="{{ country }}">{{ country }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="parc" class="form-label" data-translate="select_park">{{ translate('select_park') }}</label>
+                        <select class="form-select" id="parc" name="parc" required>
+                            <option value="" data-translate="choose_park">{{ translate('choose_park') }}</option>
+                            <option value="Tous" data-translate="all_parks">{{ translate('all_parks') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="type" class="form-label" data-translate="search_type">{{ translate('search_type') }}</label>
+                        <select class="form-select" id="type" name="type" required>
+                            <option value="" data-translate="choose_type">{{ translate('choose_type') }}</option>
+                            <option value="Activités" data-translate="activities">{{ translate('activities') }}</option>
+                            <option value="Hébergements" data-translate="accommodations">{{ translate('accommodations') }}</option>
+                            <option value="Restaurants" data-translate="restaurants">{{ translate('restaurants') }}</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" data-translate="search">{{ translate('search') }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function toggleLanguage(switchElement) {
+        const currentLang = switchElement.getAttribute('data-language');
+        const newLang = currentLang === 'fr' ? 'en' : 'fr';
+        window.location.href = `/set_language/${newLang}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    }
+
+    // Mise à jour dynamique des parcs en fonction du pays sélectionné
+    document.getElementById('country').addEventListener('change', function() {
+        const country = this.value;
+        const parcSelect = document.getElementById('parc');
+        
+        if (country) {
+            fetch(`/api/parks?country=${encodeURIComponent(country)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Garder l'option par défaut et "Tous"
+                    parcSelect.innerHTML = `
+                        <option value="" data-translate="choose_park">{{ translate('choose_park') }}</option>
+                        <option value="Tous" data-translate="all_parks">{{ translate('all_parks') }}</option>
+                    `;
+                    
+                    // Ajouter les parcs
+                    data.parks.forEach(park => {
+                        const option = document.createElement('option');
+                        option.value = park;
+                        option.textContent = park;
+                        parcSelect.appendChild(option);
+                    });
+                });
+        }
+    });
+    </script>
 </body>
 </html>

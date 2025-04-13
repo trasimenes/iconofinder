@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from config.urls import PARKS_URLS
 
 class HousingService:
     def __init__(self):
@@ -7,6 +8,21 @@ class HousingService:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+
+    def get_urls(self):
+        """
+        Retourne les URLs des parcs avec leur pays
+        """
+        urls = {}
+        for country, parks in PARKS_URLS.items():
+            for park_name, park_urls in parks.items():
+                urls[park_name] = {
+                    'country': country,
+                    'activities': park_urls['activities'],
+                    'cottages': park_urls['cottages'],
+                    'restaurants': park_urls['restaurants']
+                }
+        return urls
 
     def get_housings_with_placeholders(self, parc_url):
         """
@@ -19,69 +35,113 @@ class HousingService:
             response = self.session.get(parc_url)
             response.raise_for_status()
             
+            print("\n=== HEADERS DE LA RÉPONSE ===")
+            for key, value in response.headers.items():
+                print(f"{key}: {value}")
+            
+            print("\n=== DÉBUT DU HTML ===")
+            print(response.text[:1000])  # Affiche les 1000 premiers caractères
+            
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Chercher tous les blocs d'hébergements avec la classe accCart
-            housing_blocks = soup.find_all('div', class_='accCart')
+            # Chercher tous les blocs d'hébergements avec différents sélecteurs
+            housing_blocks = []
+            selectors = [
+                'div.accCart',  # Sélecteur original
+                'div[class*="cottage"]',  # Tout div contenant "cottage" dans sa classe
+                'div[class*="housing"]',  # Tout div contenant "housing" dans sa classe
+                'div[class*="accommodation"]'  # Tout div contenant "accommodation" dans sa classe
+            ]
+            
+            for selector in selectors:
+                blocks = soup.select(selector)
+                if blocks:
+                    print(f"Trouvé {len(blocks)} hébergements avec le sélecteur: {selector}")
+                    housing_blocks.extend(blocks)
+            
+            # Dédupliquer les blocs en utilisant le nom de l'hébergement
+            unique_blocks = []
+            seen_names = set()
+            
+            for block in housing_blocks:
+                # Chercher le titre avec différents sélecteurs
+                title_selectors = [
+                    'h2.accCart-housingTitle',
+                    'h2[class*="title"]',
+                    'h3[class*="title"]',
+                    '.cottage-name',
+                    '.housing-name'
+                ]
+                
+                title_element = None
+                for selector in title_selectors:
+                    title_element = block.select_one(selector)
+                    if title_element:
+                        break
+                
+                housing_name = title_element.text.strip() if title_element else None
+                
+                if housing_name and housing_name not in seen_names:
+                    seen_names.add(housing_name)
+                    unique_blocks.append(block)
+            
+            housing_blocks = unique_blocks
             total_housings = len(housing_blocks)
-            print(f"\nTotal des hébergements trouvés: {total_housings}")
+            print(f"\nTotal des hébergements uniques trouvés: {total_housings}")
             
             # Liste pour stocker les hébergements
             all_housings = []
             
             # Pour chaque bloc d'hébergement
             for block in housing_blocks:
-                # Récupérer l'ID du cottage (ex: VN1037)
+                # Récupérer l'ID du cottage
                 cottage_id = block.get('id', '').replace('accCart_', '')
                 
-                # Chercher le titre dans h2.accCart-housingTitle
-                title_element = block.find('h2', class_='accCart-housingTitle')
-                housing_name = title_element.text.strip() if title_element else f"Cottage {cottage_id}"
+                # Chercher le titre (on l'a déjà trouvé plus haut)
+                title_element = None
+                for selector in title_selectors:
+                    title_element = block.select_one(selector)
+                    if title_element:
+                        break
+                
+                housing_name = title_element.text.strip() if title_element else f"Hébergement {cottage_id}"
                 
                 print(f"\n=== Analyse de: {housing_name} (ID: {cottage_id}) ===")
                 
-                # Élargir la recherche avec plusieurs sélecteurs
-                slider_pictures = []
+                # Chercher les images avec différents sélecteurs
+                image_selectors = [
+                    'img.sliderPhotos-img',
+                    'img[class*="cottage"]',
+                    'img[class*="housing"]',
+                    'img[data-src*="photos"]',
+                    'img[src*="photos"]'
+                ]
                 
-                # 1. Chercher les images dans sliderPhotos-picture
-                slider_container = block.find('div', class_='sliderPhotos')
-                if slider_container:
-                    slider_pictures = slider_container.find_all('div', class_='sliderPhotos-picture')
-                
-                # Si rien trouvé, chercher avec un sélecteur alternatif
-                if not slider_pictures:
-                    slider_pictures = block.find_all('div', class_='sliderPhotos-picture')
-                
-                # Si toujours rien, essayer de trouver des images directement
-                if not slider_pictures:
-                    print("Tentative de recherche directe d'images...")
-                    direct_images = block.find_all('img', class_='sliderPhotos-img')
-                    # Créer des containers virtuels pour les images trouvées directement
-                    for img in direct_images:
-                        # Créer un container virtuel
-                        virtual_container = soup.new_tag('div')
-                        virtual_container['class'] = 'sliderPhotos-picture'
-                        virtual_container.append(img)
-                        slider_pictures.append(virtual_container)
-                
-                print(f"Conteneurs d'images trouvés: {len(slider_pictures)}")
-                
-                # Chercher toutes les balises img dans ces conteneurs
                 all_images = []
-                for picture in slider_pictures:
-                    img = picture.find('img')
-                    if img:
-                        all_images.append(img)
+                for selector in image_selectors:
+                    images = block.select(selector)
+                    if images:
+                        print(f"Trouvé {len(images)} images avec le sélecteur: {selector}")
+                        all_images.extend(images)
                 
-                # Si toujours rien, chercher des images n'importe où dans le bloc
-                if not all_images:
-                    print("Tentative de recherche d'images partout dans le bloc...")
-                    all_images = block.find_all('img')
+                # Dédupliquer les images
+                unique_images = []
+                seen_srcs = set()
                 
-                print(f"Images trouvées: {len(all_images)}")
+                for img in all_images:
+                    src = img.get('src', '')
+                    data_src = img.get('data-src', '')
+                    key = f"{src}|{data_src}"
+                    
+                    if key not in seen_srcs:
+                        seen_srcs.add(key)
+                        unique_images.append(img)
+                
+                all_images = unique_images
+                print(f"Images uniques trouvées: {len(all_images)}")
                 
                 # Détails de chaque image trouvée
-                has_photos = False  # Par défaut, on suppose qu'il n'y a pas de photos
+                has_photos = False
                 images_details = []
                 
                 # Analyse des images trouvées
@@ -90,26 +150,16 @@ class HousingService:
                     data_src = img.get('data-src', '')
                     data_url_desktop = img.get('data-url-desktop', '')
                     
-                    # Une image est valide si elle a une URL et ne contient pas "default"
+                    # Une image est valide si elle a une URL et ne contient pas "default" ou "placeholder"
                     is_valid = False
                     
-                    # Vérifier data-src
-                    if data_src and "default" not in data_src.lower():
-                        if "photos.centerparcs.com" in data_src or "fp2/photos" in data_src:
-                            is_valid = True
-                            has_photos = True
-                    
-                    # Vérifier src
-                    if not is_valid and src and "default" not in src.lower():
-                        if "photos.centerparcs.com" in src or "fp2/photos" in src:
-                            is_valid = True
-                            has_photos = True
-                    
-                    # Vérifier data-url-desktop
-                    if not is_valid and data_url_desktop and "default" not in data_url_desktop.lower():
-                        if "photos.centerparcs.com" in data_url_desktop or "fp2/photos" in data_url_desktop:
-                            is_valid = True
-                            has_photos = True
+                    # Vérifier les différentes sources d'URL
+                    for url in [data_src, src, data_url_desktop]:
+                        if url and not any(invalid in url.lower() for invalid in ['default', 'placeholder', 'blank']):
+                            if any(valid in url for valid in ['photos.centerparcs.com', 'fp2/photos']):
+                                is_valid = True
+                                has_photos = True
+                                break
                     
                     details = {
                         'cottage_id': cottage_id,
@@ -132,9 +182,8 @@ class HousingService:
                     "name": housing_name,
                     "cottage_id": cottage_id,
                     "images_found": len(all_images),
-                    "containers_found": len(slider_pictures),
-                    "has_photos": has_photos,  # True si au moins une image valide a été trouvée
-                    "images_details": images_details  # Stocker les détails pour TOUS les cottages
+                    "has_photos": has_photos,
+                    "images_details": images_details
                 }
                 
                 all_housings.append(cottage_entry)
@@ -148,29 +197,14 @@ class HousingService:
             # Obtenir la liste des cottages sans photos
             no_photo_cottages = [h for h in all_housings if not h.get("has_photos", False)]
             
-            print("\n=== DÉTAILS DES HÉBERGEMENTS SANS PHOTOS ===")
-            for housing in no_photo_cottages:
-                print(f"\n{housing['name']} (ID: {housing['cottage_id']}):")
-                print(f"- Images trouvées: {housing['images_found']}")
-                print(f"- Conteneurs d'images trouvés: {housing['containers_found']}")
-                if housing.get('images_details'):
-                    print("- Détails des images:")
-                    for img in housing['images_details']:
-                        print(f"\n  src: {img['src']}")
-                        print(f"  data-src: {img['data_src']}")
-                        print(f"  data-url-desktop: {img['data_url_desktop']}")
-                        print(f"  Valide: {'✓ (vraie photo)' if img['is_valid'] else '✗ (placeholder ou non trouvée)'}")
-                else:
-                    print("- Aucune image trouvée")
-            
-            print(f"\n=== RÉSUMÉ ===")
+            print("\n=== RÉSUMÉ ===")
             print(f"Total des hébergements: {total_housings}")
-            print(f"Hébergements analysés: {total_housings}")
             print(f"Hébergements avec vraies photos: {len(all_housings) - len(no_photo_cottages)}")
-            print(f"Hébergements avec photos manquantes/placeholders: {len(no_photo_cottages)}")
+            print(f"Hébergements avec photos manquantes: {len(no_photo_cottages)}")
             
             return {
-                "housings": all_housings
+                "housings": all_housings,
+                "no_missing_photos": len(no_photo_cottages) == 0
             }
             
         except Exception as e:
