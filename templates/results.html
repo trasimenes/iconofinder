@@ -26,14 +26,11 @@
     </nav>
 
     <div class="container py-4">
-        <h1 data-translate="welcome_title">{{ translate('welcome_title') }}</h1>
-
-        {% if error %}
-            <div class="alert alert-danger" data-translate="error">
-                {{ translate(error) }}
+        {% if results is defined %}
+            <div class="alert alert-info text-center mb-4">
+                <i class="bi bi-database"></i> {{ translate('snapshot_banner') }}
             </div>
-        {% else %}
-            <!-- Navigation tabs -->
+            <!-- Affichage direct des résultats depuis le snapshot -->
             <ul class="nav nav-pills mb-4" role="tablist">
                 {% for country in countries %}
                 <li class="nav-item" role="presentation">
@@ -47,88 +44,150 @@
                 </li>
                 {% endfor %}
             </ul>
-
-            <!-- Tab content -->
             <div class="tab-content">
                 {% for country in countries %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
-                     id="{{ country|lower }}" 
-                     role="tabpanel"
-                     data-country="{{ country }}"
-                     data-loaded="false">
-                    
-                    <div class="country-loading">
-                        <div class="d-flex justify-content-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden" data-translate="loading">{{ translate('loading') }}</span>
-                            </div>
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ country|lower }}" role="tabpanel">
+                    {% for park, parkData in results[country].items() %}
+                        <div class="park-section mb-4">
+                            <h3>{{ park }}</h3>
+                            {% if type == 'Activités' and parkData.activities %}
+                                <div class="list-group">
+                                    {% for activity in parkData.activities %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ activity.name }}
+                                            <span class="badge bg-danger rounded-pill">
+                                                <i class="bi bi-exclamation-circle"></i> {{ translate('photos_missing') }}
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif type == 'Hébergements' and parkData.housings %}
+                                <div class="list-group">
+                                    {% for housing in parkData.housings %}
+                                        <div class="list-group-item">
+                                            {{ housing.name }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif type == 'Restaurants' and parkData.restaurants %}
+                                <div class="list-group">
+                                    {% for restaurant in parkData.restaurants %}
+                                        <div class="list-group-item">
+                                            {{ restaurant.name }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">Aucune donnée trouvée.</div>
+                            {% endif %}
                         </div>
-                        <p class="text-center mt-2" data-translate="searching_for">{{ translate('searching_for') }} {{ country }}...</p>
-                    </div>
-
-                    <div class="country-results" style="display: none;">
-                        <!-- Les résultats seront injectés ici -->
-                    </div>
-
-                    <div class="country-error alert alert-danger" style="display: none;">
-                        <!-- Les erreurs seront affichées ici -->
-                    </div>
+                    {% endfor %}
                 </div>
                 {% endfor %}
             </div>
-
-            <!-- Template pour les résultats dynamiques -->
-            <template id="park-results-template">
-                <div class="park-section mb-4">
-                    <h3>${parkName}</h3>
-                    <p class="text-muted small">${parkData.url}</p>
-
-                    <!-- Message de succès -->
-                    <div class="alert alert-success">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-check-circle"></i> 
-                                <span data-translate="photos_ok">{{ translate('photos_ok') }}</span>
-                            </div>
-                            <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#details-${parkId}">
-                                <span data-translate="show_details">{{ translate('show_details') }}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Message d'erreur -->
-                    <div class="alert alert-danger">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-exclamation-triangle"></i> 
-                                <span data-translate="error_occurred">{{ translate('error_occurred') }}</span>
-                            </div>
-                            <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#error-details-${parkId}">
-                                <span data-translate="show_details">{{ translate('show_details') }}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Détails des vérifications -->
-                    <div class="card card-body mb-3">
-                        <h5 data-translate="verification_details">{{ translate('verification_details') }}</h5>
-                        <ul class="list-group">
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span data-translate="items_checked">{{ translate('items_checked') }}</span>
-                                <span class="badge bg-success rounded-pill">
-                                    <i class="bi bi-check-circle"></i>
-                                </span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span data-translate="photos_checked">{{ translate('photos_checked') }}</span>
-                                <span class="badge bg-success rounded-pill">
-                                    <i class="bi bi-check-circle"></i>
-                                </span>
-                            </li>
-                        </ul>
-                    </div>
+        {% else %}
+            {% if error %}
+                <div class="alert alert-danger" data-translate="error">
+                    {{ translate(error) }}
                 </div>
-            </template>
+            {% else %}
+                <!-- Navigation tabs -->
+                <ul class="nav nav-pills mb-4" role="tablist">
+                    {% for country in countries %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if loop.first %}active{% endif %}" 
+                                data-bs-toggle="pill" 
+                                data-bs-target="#{{ country|lower }}" 
+                                type="button" 
+                                role="tab">
+                            {{ country }}
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Tab content -->
+                <div class="tab-content">
+                    {% for country in countries %}
+                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                         id="{{ country|lower }}" 
+                         role="tabpanel"
+                         data-country="{{ country }}"
+                         data-loaded="false">
+                        
+                        <div class="country-loading">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden" data-translate="loading">{{ translate('loading') }}</span>
+                                </div>
+                            </div>
+                            <p class="text-center mt-2" data-translate="searching_for">{{ translate('searching_for') }} {{ country }}...</p>
+                        </div>
+
+                        <div class="country-results" style="display: none;">
+                            <!-- Les résultats seront injectés ici -->
+                        </div>
+
+                        <div class="country-error alert alert-danger" style="display: none;">
+                            <!-- Les erreurs seront affichées ici -->
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Template pour les résultats dynamiques -->
+                <template id="park-results-template">
+                    <div class="park-section mb-4">
+                        <h3>${parkName}</h3>
+                        <p class="text-muted small">${parkData.url}</p>
+
+                        <!-- Message de succès -->
+                        <div class="alert alert-success">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-check-circle"></i> 
+                                    <span data-translate="photos_ok">{{ translate('photos_ok') }}</span>
+                                </div>
+                                <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#details-${parkId}">
+                                    <span data-translate="show_details">{{ translate('show_details') }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Message d'erreur -->
+                        <div class="alert alert-danger">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-exclamation-triangle"></i> 
+                                    <span data-translate="error_occurred">{{ translate('error_occurred') }}</span>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#error-details-${parkId}">
+                                    <span data-translate="show_details">{{ translate('show_details') }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Détails des vérifications -->
+                        <div class="card card-body mb-3">
+                            <h5 data-translate="verification_details">{{ translate('verification_details') }}</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span data-translate="items_checked">{{ translate('items_checked') }}</span>
+                                    <span class="badge bg-success rounded-pill">
+                                        <i class="bi bi-check-circle"></i>
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span data-translate="photos_checked">{{ translate('photos_checked') }}</span>
+                                    <span class="badge bg-success rounded-pill">
+                                        <i class="bi bi-check-circle"></i>
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </template>
+            {% endif %}
         {% endif %}
     </div>
 

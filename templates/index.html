@@ -14,6 +14,9 @@
             <a class="navbar-brand" href="/">
                 <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Nyan Cat" class="nyan-cat">
             </a>
+            <a href="/snapshots" class="btn btn-primary ms-3">
+                <i class="bi bi-archive"></i> Snapshots
+            </a>
             <div class="switch" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
                 <div class="switch-labels">
                     <span class="fr">FR</span>
@@ -61,7 +64,10 @@
                         </select>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" data-translate="search">{{ translate('search') }}</button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" data-translate="search">{{ translate('search') }}</button>
+                        <button type="submit" formaction="/results_from_snapshot" formmethod="get" class="btn btn-outline-success">{{ translate('show_latest_data') }}</button>
+                    </div>
                 </form>
             </div>
         </div>

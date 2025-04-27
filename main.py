@@ -1,4 +1,8 @@
 import os
+import json
+import threading
+import time
+import datetime
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from config.urls import PARKS_URLS
 from services.activities import ActivityService
@@ -15,6 +19,19 @@ print("=== FLASK SERVEUR EN TRAIN DE DÉMARRER ===")
 activity_service = ActivityService()
 housing_service = HousingService()
 restaurant_service = RestaurantService()
+
+SNAPSHOT_FILE = 'snapshots.json'
+PROGRESS_FILE = 'snapshot_progress.json'
+
+def load_snapshots():
+    if not os.path.exists(SNAPSHOT_FILE):
+        return []
+    with open(SNAPSHOT_FILE, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def save_snapshots(snapshots):
+    with open(SNAPSHOT_FILE, 'w', encoding='utf-8') as f:
+        json.dump(snapshots, f, ensure_ascii=False, indent=2)
 
 def search_activities(country, parc):
     """Recherche les activités avec photos manquantes"""
@@ -238,6 +255,37 @@ def results():
                         parc=parc,
                         translate=get_translation)
 
+@app.route('/results_from_snapshot')
+def results_from_snapshot():
+    country = request.args.get('country')
+    parc = request.args.get('parc')
+    search_type = request.args.get('type')
+    snapshots = load_snapshots()
+    if not snapshots:
+        return render_template('results.html', error="Aucun snapshot disponible", translate=get_translation)
+    last = snapshots[-1]
+    data = last['data']
+    filtered = {}
+    countries = []
+    if country == "Tous":
+        countries = list(data['activities'].keys())
+    else:
+        countries = [country]
+    for c in countries:
+        filtered[c] = {}
+        if parc == "Tous":
+            parcs = data['activities'][c].keys()
+        else:
+            parcs = [parc]
+        for p in parcs:
+            if search_type == "Activités":
+                filtered[c][p] = data['activities'][c].get(p, {})
+            elif search_type == "Hébergements":
+                filtered[c][p] = data['housings'][c].get(p, {})
+            elif search_type == "Restaurants":
+                filtered[c][p] = data['restaurants'][c].get(p, {})
+    return render_template('results.html', countries=countries, type=search_type, parc=parc, results=filtered, translate=get_translation)
+
 def get_current_language():
     """
     Retourne la langue actuelle, avec 'fr' comme langue par défaut
@@ -248,6 +296,128 @@ def get_current_language():
 @app.context_processor
 def utility_processor():
     return dict(translate=get_translation)
+
+@app.route('/snapshots', methods=['GET'])
+def snapshot_manager():
+    snapshots = load_snapshots()
+    return render_template('snapshots.html', snapshots=snapshots)
+
+@app.route('/snapshots/create', methods=['POST'])
+def create_snapshot():
+    snapshots = load_snapshots()
+    new_id = 1 + max([s.get('id', 0) for s in snapshots], default=0)
+    # Recherche globale : tout, tout, partout
+    activities = search_activities('Tous', 'Tous')
+    housings = search_housings('Tous', 'Tous')
+    restaurants = search_restaurants('Tous', 'Tous')
+    new_snapshot = {
+        'id': new_id,
+        'name': f'Snapshot {new_id}',
+        'created_at': datetime.datetime.now().isoformat(sep=' ', timespec='seconds'),
+        'data': {
+            'activities': activities,
+            'housings': housings,
+            'restaurants': restaurants
+        },
+    }
+    snapshots.append(new_snapshot)
+    save_snapshots(snapshots)
+    return redirect(url_for('snapshot_manager'))
+
+@app.route('/snapshots/delete/<int:snap_id>', methods=['GET'])
+def delete_snapshot(snap_id):
+    snapshots = load_snapshots()
+    snapshots = [s for s in snapshots if s.get('id') != snap_id]
+    save_snapshots(snapshots)
+    return redirect(url_for('snapshot_manager'))
+
+@app.route('/snapshots/view/<int:snap_id>', methods=['GET'])
+def view_snapshot(snap_id):
+    snapshots = load_snapshots()
+    snap = next((s for s in snapshots if s.get('id') == snap_id), None)
+    if not snap:
+        return redirect(url_for('snapshot_manager'))
+    return render_template('snapshots_detail.html', snapshot=snap)
+
+@app.route('/snapshots/create_async')
+def create_snapshot_async():
+    # Démarre le thread de création si pas déjà en cours
+    if not os.path.exists(PROGRESS_FILE):
+        t = threading.Thread(target=run_snapshot_creation)
+        t.start()
+    return render_template('snapshots_creating.html')
+
+@app.route('/snapshots/progress')
+def snapshot_progress():
+    if not os.path.exists(PROGRESS_FILE):
+        return jsonify({"activities": 0, "housings": 0, "restaurants": 0, "status": "En attente…", "done": False})
+    with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+        return jsonify(json.load(f))
+
+def run_snapshot_creation():
+    progress = {"activities": 0, "housings": 0, "restaurants": 0, "status": "Démarrage…", "done": False}
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    # 1. Activités
+    progress["status"] = "Recherche des activités…"
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    activities = {}
+    countries = list(PARKS_URLS.keys())
+    all_parks = [(country, park) for country in countries for park in PARKS_URLS[country].keys()]
+    total = len(all_parks)
+    for i, (country, park) in enumerate(all_parks):
+        activities.setdefault(country, {})[park] = activity_service.get_activities_with_placeholders(PARKS_URLS[country][park]["activities"])
+        progress["activities"] = int((i+1)/total*100)
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(progress, f)
+    # 2. Hébergements
+    progress["status"] = "Recherche des hébergements…"
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    housings = {}
+    for i, (country, park) in enumerate(all_parks):
+        housings.setdefault(country, {})[park] = housing_service.get_housings_with_placeholders(PARKS_URLS[country][park]["cottages"])
+        progress["housings"] = int((i+1)/total*100)
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(progress, f)
+    # 3. Restaurants
+    progress["status"] = "Recherche des restaurants…"
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    restaurants = {}
+    for i, (country, park) in enumerate(all_parks):
+        restaurants.setdefault(country, {})[park] = restaurant_service.get_restaurants_with_placeholders(PARKS_URLS[country][park]["restaurants"])
+        progress["restaurants"] = int((i+1)/total*100)
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(progress, f)
+    # Finalisation
+    progress["status"] = "Sauvegarde du snapshot…"
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    # Ajout du snapshot
+    snapshots = load_snapshots()
+    new_id = 1 + max([s.get('id', 0) for s in snapshots], default=0)
+    new_snapshot = {
+        'id': new_id,
+        'name': f'Snapshot {new_id}',
+        'created_at': datetime.datetime.now().isoformat(sep=' ', timespec='seconds'),
+        'data': {
+            'activities': activities,
+            'housings': housings,
+            'restaurants': restaurants
+        },
+    }
+    snapshots.append(new_snapshot)
+    save_snapshots(snapshots)
+    progress["status"] = "Terminé !"
+    progress["done"] = True
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    # Nettoyage du fichier d'avancement après quelques secondes
+    time.sleep(3)
+    if os.path.exists(PROGRESS_FILE):
+        os.remove(PROGRESS_FILE)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

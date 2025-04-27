@@ -77,7 +77,9 @@
       "images_found": "Images found",
       "image_valid": "Valid image",
       "image_placeholder": "Default image",
-      "new_search": "New search"
+      "new_search": "New search",
+      "snapshot_banner": "Latest data from snapshot",
+      "show_latest_data": "Display most recent data"
     },
     "fr": {
       "welcome_message": "Bienvenue sur l'Iconofinder de Center Parcs",
@@ -157,6 +159,8 @@
       "details_title": "Détails de l'hébergement",
       "show_details": "Afficher les détails",
       "show_details": "Afficher les détails",
-      "new_search": "Nouvelle recherche"
+      "new_search": "Nouvelle recherche",
+      "snapshot_banner": "Affichage à partir du dernier snapshot JSON (données en cache)",
+      "show_latest_data": "Afficher les données les plus récentes"
     }
 }
