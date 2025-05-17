@@ -49,6 +49,15 @@
             <i class="bi bi-plus-circle"></i> Nouveau snapshot
         </a>
     </div>
+    {% if request.args.get('status') == 'success' %}
+    <div id="notif-bar" class="alert alert-success text-center position-fixed w-100" style="top:0;left:0;z-index:9999;">
+        <i class="bi bi-check-circle"></i> Snapshot réussi !
+    </div>
+    {% elif request.args.get('status') == 'error' %}
+    <div id="notif-bar" class="alert alert-danger text-center position-fixed w-100" style="top:0;left:0;z-index:9999;">
+        <i class="bi bi-x-circle"></i> Snapshot raté !
+    </div>
+    {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function toggleLanguage(switchElement) {
@@ -56,6 +65,14 @@
         const newLang = currentLang === 'fr' ? 'en' : 'fr';
         window.location.href = `/set_language/${newLang}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
+    setTimeout(function() {
+        var bar = document.getElementById('notif-bar');
+        if (bar) {
+            bar.style.transition = "opacity 1s";
+            bar.style.opacity = 0;
+            setTimeout(function() { bar.remove(); }, 1000);
+        }
+    }, 10000);
     </script>
 </body>
 </html> 

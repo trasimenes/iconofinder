@@ -26,11 +26,12 @@
     </nav>
 
     <div class="container py-4">
-        {% if results is defined %}
-            <div class="alert alert-info text-center mb-4">
-                <i class="bi bi-database"></i> {{ translate('snapshot_banner') }}
+        {% if error %}
+            <div class="alert alert-danger" data-translate="error">
+                {{ translate(error) }}
             </div>
-            <!-- Affichage direct des résultats depuis le snapshot -->
+        {% else %}
+            <!-- Navigation tabs -->
             <ul class="nav nav-pills mb-4" role="tablist">
                 {% for country in countries %}
                 <li class="nav-item" role="presentation">
@@ -44,150 +45,35 @@
                 </li>
                 {% endfor %}
             </ul>
+
+            <!-- Tab content -->
             <div class="tab-content">
                 {% for country in countries %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ country|lower }}" role="tabpanel">
-                    {% for park, parkData in results[country].items() %}
-                        <div class="park-section mb-4">
-                            <h3>{{ park }}</h3>
-                            {% if type == 'Activités' and parkData.activities %}
-                                <div class="list-group">
-                                    {% for activity in parkData.activities %}
-                                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                                            {{ activity.name }}
-                                            <span class="badge bg-danger rounded-pill">
-                                                <i class="bi bi-exclamation-circle"></i> {{ translate('photos_missing') }}
-                                            </span>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% elif type == 'Hébergements' and parkData.housings %}
-                                <div class="list-group">
-                                    {% for housing in parkData.housings %}
-                                        <div class="list-group-item">
-                                            {{ housing.name }}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% elif type == 'Restaurants' and parkData.restaurants %}
-                                <div class="list-group">
-                                    {% for restaurant in parkData.restaurants %}
-                                        <div class="list-group-item">
-                                            {{ restaurant.name }}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="alert alert-info">Aucune donnée trouvée.</div>
-                            {% endif %}
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                     id="{{ country|lower }}" 
+                     role="tabpanel"
+                     data-country="{{ country }}"
+                     data-loaded="false">
+                    
+                    <div class="country-loading">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden" data-translate="loading">{{ translate('loading') }}</span>
+                            </div>
                         </div>
-                    {% endfor %}
+                        <p class="text-center mt-2" data-translate="searching_for">{{ translate('searching_for') }} {{ country }}...</p>
+                    </div>
+
+                    <div class="country-results" style="display: none;">
+                        <!-- Les résultats seront injectés ici -->
+                    </div>
+
+                    <div class="country-error alert alert-danger" style="display: none;">
+                        <!-- Les erreurs seront affichées ici -->
+                    </div>
                 </div>
                 {% endfor %}
             </div>
-        {% else %}
-            {% if error %}
-                <div class="alert alert-danger" data-translate="error">
-                    {{ translate(error) }}
-                </div>
-            {% else %}
-                <!-- Navigation tabs -->
-                <ul class="nav nav-pills mb-4" role="tablist">
-                    {% for country in countries %}
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link {% if loop.first %}active{% endif %}" 
-                                data-bs-toggle="pill" 
-                                data-bs-target="#{{ country|lower }}" 
-                                type="button" 
-                                role="tab">
-                            {{ country }}
-                        </button>
-                    </li>
-                    {% endfor %}
-                </ul>
-
-                <!-- Tab content -->
-                <div class="tab-content">
-                    {% for country in countries %}
-                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
-                         id="{{ country|lower }}" 
-                         role="tabpanel"
-                         data-country="{{ country }}"
-                         data-loaded="false">
-                        
-                        <div class="country-loading">
-                            <div class="d-flex justify-content-center">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden" data-translate="loading">{{ translate('loading') }}</span>
-                                </div>
-                            </div>
-                            <p class="text-center mt-2" data-translate="searching_for">{{ translate('searching_for') }} {{ country }}...</p>
-                        </div>
-
-                        <div class="country-results" style="display: none;">
-                            <!-- Les résultats seront injectés ici -->
-                        </div>
-
-                        <div class="country-error alert alert-danger" style="display: none;">
-                            <!-- Les erreurs seront affichées ici -->
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-
-                <!-- Template pour les résultats dynamiques -->
-                <template id="park-results-template">
-                    <div class="park-section mb-4">
-                        <h3>${parkName}</h3>
-                        <p class="text-muted small">${parkData.url}</p>
-
-                        <!-- Message de succès -->
-                        <div class="alert alert-success">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="bi bi-check-circle"></i> 
-                                    <span data-translate="photos_ok">{{ translate('photos_ok') }}</span>
-                                </div>
-                                <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#details-${parkId}">
-                                    <span data-translate="show_details">{{ translate('show_details') }}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Message d'erreur -->
-                        <div class="alert alert-danger">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="bi bi-exclamation-triangle"></i> 
-                                    <span data-translate="error_occurred">{{ translate('error_occurred') }}</span>
-                                </div>
-                                <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#error-details-${parkId}">
-                                    <span data-translate="show_details">{{ translate('show_details') }}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Détails des vérifications -->
-                        <div class="card card-body mb-3">
-                            <h5 data-translate="verification_details">{{ translate('verification_details') }}</h5>
-                            <ul class="list-group">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span data-translate="items_checked">{{ translate('items_checked') }}</span>
-                                    <span class="badge bg-success rounded-pill">
-                                        <i class="bi bi-check-circle"></i>
-                                    </span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span data-translate="photos_checked">{{ translate('photos_checked') }}</span>
-                                    <span class="badge bg-success rounded-pill">
-                                        <i class="bi bi-check-circle"></i>
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </template>
-            {% endif %}
         {% endif %}
     </div>
 
@@ -212,6 +98,8 @@
         const tabPane = document.querySelector(`#${country.toLowerCase()}`);
         if (!tabPane || tabPane.getAttribute('data-loaded') === 'true') return;
 
+        let lang = document.documentElement.lang || 'fr';
+
         try {
             const response = await fetch(`/api/search?country=${country}&parc=${parc}&type=${searchType}`);
             const data = await response.json();
@@ -231,289 +119,652 @@
             let allParksOk = true;
             let detailedResults = '';
 
-            // Parcourir les parcs du pays
-            for (const [parkName, parkData] of Object.entries(data[country] || {})) {
-                let parkHasIssues = false;
-                let parkDetails = `<div class="park-details mb-3"><h4>${parkName}</h4>`;
+            // Patch pour n'afficher QUE les blocs pertinents selon le type de recherche
+            const isRestaurants = searchType === 'Restaurants';
+            const isHousings = searchType === 'Hébergements';
+            const isActivities = searchType === 'Activités';
 
-                if (parkData.error) {
-                    allParksOk = false;
-                    parkHasIssues = true;
-                    parkDetails += `
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle"></i> ${parkData.error}
-                        </div>`;
-                } else {
-                    if (searchType === "Hébergements" && parkData.housings) {
-                        const missingPhotos = parkData.housings.filter(h => !h.has_photos);
-                        if (missingPhotos.length > 0) {
-                            allParksOk = false;
-                            parkHasIssues = true;
-                            parkDetails += `<div class="list-group">`;
-                            missingPhotos.forEach(housing => {
-                                parkDetails += `
-                                    <div class="list-group-item">
-                                        ${housing.name}
-                                    </div>`;
-                            });
-                            parkDetails += `</div>`;
+            // Calculer l'état global des photos
+            let hasMissingPhotos = false;
+            for (const countryKey of (country === "Tous" ? Object.keys(data.results) : [country])) {
+                for (const parkKey in data.results[countryKey]) {
+                    const parkData = data.results[countryKey][parkKey];
+                    if (isActivities && parkData.activities) {
+                        for (const a of parkData.activities) {
+                            if (!a.image_src || a.image_src.includes('default')) {
+                                hasMissingPhotos = true;
+                                break;
+                            }
                         }
-                    } else if (searchType === "Restaurants" && parkData.restaurants) {
-                        const missingPhotos = parkData.restaurants.filter(r => !r.has_photos);
-                        if (missingPhotos.length > 0) {
-                            allParksOk = false;
-                            parkHasIssues = true;
-                            parkDetails += `<div class="list-group">`;
-                            missingPhotos.forEach(restaurant => {
-                                parkDetails += `
-                                    <div class="list-group-item">
-                                        ${restaurant.name}
-                                    </div>`;
-                            });
-                            parkDetails += `</div>`;
-                        }
-                    } else if (parkData.activities && parkData.activities.length > 0) {
-                        allParksOk = false;
-                        parkHasIssues = true;
-                        parkDetails += `<div class="list-group">`;
-                        parkData.activities.forEach(activity => {
-                            parkDetails += `
-                                <div class="list-group-item">
-                                    ${activity.name}
-                                </div>`;
-                        });
-                        parkDetails += `</div>`;
-                    }
-                }
-
-                parkDetails += `</div>`;
-                if (parkHasIssues) {
-                    detailedResults += parkDetails;
-                }
-
-                // Affichage normal des résultats
-                resultsHtml += `
-                    <div class="park-section mb-4">
-                        <h3>${parkName}</h3>
-                        <p class="text-muted small">${parkData.url}</p>`;
-
-                if (parkData.error) {
-                    resultsHtml += `
-                        <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle"></i> ${parkData.error}
-                            ${parkData.details ? `
-                                <button class="btn btn-link text-danger" type="button" data-bs-toggle="collapse" data-bs-target="#details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}">
-                                    {{ translate('show_details') }}
-                                </button>
-                                <div class="collapse" id="details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}">
-                                    <pre class="bg-light p-3 mt-2"><code>${parkData.details}</code></pre>
-                                </div>
-                            ` : ''}
-                        </div>`;
-                } else {
-                    if (searchType === "Hébergements" && parkData.housings) {
-                        if (parkData.housings.length > 0) {
-                            resultsHtml += `<div class="list-group">`;
-                            parkData.housings.forEach(housing => {
-                                const statusClass = housing.has_photos ? 'bg-success' : 'bg-danger';
-                                const statusText = housing.has_photos ? '{{ translate("photos_ok") }}' : '{{ translate("photos_missing") }}';
-                                const detailsId = `details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}-${housing.cottage_id}`;
-                                
-                                resultsHtml += `
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="d-flex align-items-center">
-                                                <span class="me-3">${housing.name}</span>
-                                                <span class="badge ${statusClass} rounded-pill">
-                                                    <i class="bi bi-${housing.has_photos ? 'check-circle' : 'exclamation-circle'}"></i>
-                                                    <span data-translate="${housing.has_photos ? 'photos_ok' : 'photos_missing'}">${statusText}</span>
-                                                </span>
-                                            </div>
-                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#${detailsId}">
-                                                {{ translate('show_details') }}
-                                            </button>
-                                        </div>
-                                        <div class="collapse mt-3" id="${detailsId}">
-                                            <div class="card card-body">
-                                                <h6 data-translate="details_title">{{ translate('details_title') }}</h6>
-                                                <ul class="list-unstyled mb-0">
-                                                    <li><span data-translate="cottage_id">{{ translate('cottage_id') }}</span>: ${housing.cottage_id}</li>
-                                                    <li><span data-translate="images_found">{{ translate('images_found') }}</span>: ${housing.images_found}</li>
-                                                    ${housing.images_details.map(img => `
-                                                        <li class="mt-2">
-                                                            <small class="text-muted">Image:</small><br>
-                                                            ${img.src ? `<small>src: ${img.src}</small><br>` : ''}
-                                                            ${img.data_src ? `<small>data-src: ${img.data_src}</small><br>` : ''}
-                                                            ${img.data_url_desktop ? `<small>data-url-desktop: ${img.data_url_desktop}</small><br>` : ''}
-                                                            <span class="badge ${img.is_valid ? 'bg-success' : 'bg-warning'} rounded-pill">
-                                                                <i class="bi bi-${img.is_valid ? 'check-circle' : 'exclamation-circle'}"></i>
-                                                                ${img.is_valid ? '{{ translate("image_valid") }}' : '{{ translate("image_placeholder") }}'}
-                                                            </span>
-                                                        </li>
-                                                    `).join('')}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>`;
-                            });
-                            resultsHtml += `</div>`;
-                        }
-                    } else if (searchType === "Restaurants" && parkData.restaurants) {
-                        if (parkData.restaurants.length > 0) {
-                            resultsHtml += `<div class="list-group">`;
-                            parkData.restaurants.forEach(restaurant => {
-                                if (!restaurant.has_photos) {
-                                    resultsHtml += `
-                                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                                            ${restaurant.name}
-                                            <span class="badge bg-danger rounded-pill">
-                                                <i class="bi bi-exclamation-circle"></i> {{ translate('photos_missing') }}
-                                            </span>
-                                        </div>`;
-                                }
-                            });
-                            resultsHtml += `</div>`;
-                        } else if (parkData.no_missing_photos) {
-                            resultsHtml += `
-                                <div class="alert alert-success">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <i class="bi bi-check-circle"></i> {{ translate('photos_ok') }}
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}">
-                                            {{ translate('show_details') }}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="collapse" id="details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}">
-                                    <div class="card card-body mb-3">
-                                        <h5>Détails des vérifications</h5>
-                                        <ul class="list-group">
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Restaurants vérifiés
-                                                <span class="badge bg-success rounded-pill">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Photos vérifiées
-                                                <span class="badge bg-success rounded-pill">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>`;
-                        }
-                    } else {
-                        if (parkData.activities && parkData.activities.length > 0) {
-                            resultsHtml += `<div class="list-group">`;
-                            parkData.activities.forEach(activity => {
-                                resultsHtml += `
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        ${activity.name}
-                                        <span class="badge bg-danger rounded-pill">
-                                            <i class="bi bi-exclamation-circle"></i> {{ translate('photos_missing') }}
-                                        </span>
-                                    </div>`;
-                            });
-                            resultsHtml += `</div>`;
-                        } else if (parkData.no_missing_photos) {
-                            resultsHtml += `
-                                <div class="alert alert-success">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <i class="bi bi-check-circle"></i> {{ translate('photos_ok') }}
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}">
-                                            {{ translate('show_details') }}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="collapse" id="details-${country.toLowerCase()}-${parkName.replace(/\s+/g, '')}">
-                                    <div class="card card-body mb-3">
-                                        <h5>Détails des vérifications</h5>
-                                        <ul class="list-group">
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Activités vérifiées
-                                                <span class="badge bg-success rounded-pill">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Photos vérifiées
-                                                <span class="badge bg-success rounded-pill">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>`;
+                    } else if (isRestaurants && parkData.restaurants) {
+                        for (const r of parkData.restaurants) {
+                            if (!r.has_photos) {
+                                hasMissingPhotos = true;
+                                break;
+                            }
                         }
                     }
+                    if (hasMissingPhotos) break;
                 }
+                if (hasMissingPhotos) break;
+            }
+            // Afficher le bandeau global
+            resultsHtml += `
+                <div class="alert ${hasMissingPhotos ? 'alert-warning' : 'alert-success'} mb-4">
+                    <i class="bi bi-${hasMissingPhotos ? 'exclamation-triangle-fill' : 'check-circle-fill'}"></i>
+                    ${hasMissingPhotos ? (lang === 'en' ? 'Missing pictures' : 'Photos manquantes') : (lang === 'en' ? 'Pictures OK' : 'Photos OK')}
+                </div>
+            `;
 
-                resultsHtml += `</div>`;
-                if (Object.keys(data[country] || {}).length > 1) {
-                    resultsHtml += `<hr>`;
-                }
+            // Fonction utilitaire pour générer des IDs sûrs
+            function safeId(str) {
+                return str.replace(/[^a-zA-Z0-9]/g, '');
             }
 
-            // Si tout va bien, afficher le bandeau de succès avec le bouton "voir le détail"
-            if (allParksOk) {
-                resultsHtml = `
-                    <div class="alert alert-success mb-4">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-check-circle-fill"></i> 
-                                {{ translate('photos_ok') }}
-                            </div>
-                            <button class="btn btn-sm btn-outline-success" type="button" data-bs-toggle="collapse" data-bs-target="#details-${country.toLowerCase()}">
-                                {{ translate('show_details') }}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="collapse" id="details-${country.toLowerCase()}">
-                        <div class="card card-body mb-4">
-                            ${Object.entries(data[country] || {}).map(([parkName, parkData]) => `
-                                <div class="mb-3">
-                                    <h4>${parkName}</h4>
-                                    <p class="text-muted small">${parkData.url}</p>
-                                    <div class="alert alert-success">
-                                        <i class="bi bi-check-circle"></i> {{ translate('photos_ok') }}
+            // Parcourir les parcs du pays
+            if (country === "Tous") {
+                let accordionId = `accordion-${country.toLowerCase()}`;
+                resultsHtml += `<div class="accordion mb-4" id="${accordionId}">`;
+                let parcIndex = 0;
+                for (const [countryName, parks] of Object.entries(data.results)) {
+                    for (const [parkName, parkData] of Object.entries(parks)) {
+                        let safePanel = safeId(`${countryName}-${parkName}`);
+                        let panelId = `${accordionId}-panel-${safePanel}`;
+                        let headingId = `${panelId}-heading`;
+                        let collapseId = `${panelId}-collapse`;
+                        let isOpen = false;
+                        resultsHtml += `
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="${headingId}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                                    ${countryName} - ${parkName}
+                                </button>
+                            </h2>
+                            <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#${accordionId}">
+                                <div class="accordion-body">
+                                    <div class="mb-3">
+                                    `;
+                        if (isRestaurants) {
+                            resultsHtml += `
+                                        <b>Restaurants</b>
+                                        <ul class="list-group mb-2">`;
+                            if (Array.isArray(parkData.restaurants) && parkData.restaurants.length > 0) {
+                                parkData.restaurants.forEach(r => {
+                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${r.name}
+                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                        </span>
+                                    </li>`;
+                                });
+                            } else {
+                                resultsHtml += `<li class="list-group-item">Aucun restaurant</li>`;
+                            }
+                            resultsHtml += `</ul>
+                                        <b>Supermarchés & boutiques</b>
+                                        <ul class="list-group mb-2">`;
+                            if (Array.isArray(parkData.supermarches) && parkData.supermarches.length > 0) {
+                                parkData.supermarches.forEach(r => {
+                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${r.name}
+                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                        </span>
+                                    </li>`;
+                                });
+                            } else {
+                                resultsHtml += `<li class="list-group-item">Aucun supermarché</li>`;
+                            }
+                            resultsHtml += `</ul>
+                                        <b>Services</b>
+                                        <ul class="list-group mb-2">`;
+                            if (Array.isArray(parkData.services) && parkData.services.length > 0) {
+                                parkData.services.forEach(r => {
+                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${r.name}
+                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                        </span>
+                                    </li>`;
+                                });
+                            } else {
+                                resultsHtml += `<li class="list-group-item">Aucun service</li>`;
+                            }
+                            resultsHtml += `</ul>
+                                        <b>Forfaits</b>
+                                        <ul class="list-group mb-2">`;
+                            if (Array.isArray(parkData.forfaits) && parkData.forfaits.length > 0) {
+                                parkData.forfaits.forEach(r => {
+                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${r.name}
+                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                        </span>
+                                    </li>`;
+                                });
+                            } else {
+                                resultsHtml += `<li class="list-group-item">Aucun forfait</li>`;
+                            }
+                            resultsHtml += `</ul>`;
+                        }
+                        if (isActivities) {
+                            const activities = Array.isArray(parkData.activities) ? parkData.activities : [];
+                            const missing = activities.filter(a => !a.image_src || a.image_src.includes('default'));
+                            const ok = activities.filter(a => a.image_src && !a.image_src.includes('default'));
+                            const allPhotosOk = activities.length > 0 && missing.length === 0;
+                            resultsHtml += `<div>`;
+                            if (activities.length === 0) {
+                                resultsHtml += `<div class='alert alert-secondary'>Aucune activité trouvée.</div>`;
+                            } else if (allPhotosOk) {
+                                // Message multilingue selon la langue courante
+                                let msg = (lang === 'en')
+                                    ? 'All activities in this park have a valid photo.'
+                                    : 'Toutes les activités de ce parc possèdent une photo valide.';
+                                resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
+                                if (ok.length > 0) {
+                                    const okCollapseId = `${panelId}-ok-activities-collapse`;
+                                    resultsHtml += `
+                                        <div class='accordion' id='${panelId}-ok-accordion'>
+                                          <div class='accordion-item'>
+                                            <h2 class='accordion-header' id='${panelId}-ok-heading'>
+                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                                ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
+                                              </button>
+                                            </h2>
+                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
+                                              <div class='accordion-body'>
+                                                <ul class='list-group'>`;
+                                    ok.forEach(a => {
+                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                            ${a.name}
+                                            <span class='badge bg-success rounded-pill'>
+                                                <i class='bi bi-check-circle'></i> photo ok
+                                            </span>
+                                        </li>`;
+                                    });
+                                    resultsHtml += `</ul></div></div></div></div>`;
+                                }
+                            } else {
+                                if (missing.length > 0) {
+                                    resultsHtml += `<div class='mb-2'><b>${lang === 'en' ? 'Activities with missing pictures' : 'Activités avec photo manquante'}</b></div><ul class='list-group mb-3'>`;
+                                    missing.forEach(a => {
+                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                            ${a.name}
+                                            <span class='badge bg-danger rounded-pill'>
+                                                <i class='bi bi-exclamation-circle'></i> photo manquante
+                                            </span>
+                                        </li>`;
+                                    });
+                                    resultsHtml += `</ul>`;
+                                }
+                                if (ok.length > 0) {
+                                    const okCollapseId = `${panelId}-ok-activities-collapse`;
+                                    resultsHtml += `
+                                        <div class='accordion' id='${panelId}-ok-accordion'>
+                                          <div class='accordion-item'>
+                                            <h2 class='accordion-header' id='${panelId}-ok-heading'>
+                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                                ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
+                                              </button>
+                                            </h2>
+                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
+                                              <div class='accordion-body'>
+                                                <ul class='list-group'>`;
+                                    ok.forEach(a => {
+                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                            ${a.name}
+                                            <span class='badge bg-success rounded-pill'>
+                                                <i class='bi bi-check-circle'></i> photo ok
+                                            </span>
+                                        </li>`;
+                                    });
+                                    resultsHtml += `</ul></div></div></div></div>`;
+                                }
+                            }
+                            resultsHtml += `</div>`;
+                        }
+                        if (isHousings) {
+                            const housings = Array.isArray(parkData.housings) ? parkData.housings : [];
+                            const missing = housings.filter(h => !h.image_src || h.image_src.includes('default'));
+                            const ok = housings.filter(h => h.image_src && !h.image_src.includes('default'));
+                            const allPhotosOk = housings.length > 0 && missing.length === 0;
+                            resultsHtml += `<div>`;
+                            if (housings.length === 0) {
+                                resultsHtml += `<div class='alert alert-secondary'>Aucun hébergement trouvé.</div>`;
+                            } else if (allPhotosOk) {
+                                // Message multilingue selon la langue courante
+                                let msg = (lang === 'en')
+                                    ? 'All accommodations in this park have a valid photo.'
+                                    : 'Tous les hébergements de ce parc possèdent une photo valide.';
+                                resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
+                                if (ok.length > 0) {
+                                    const okCollapseId = `${panelId}-ok-housings-collapse`;
+                                    resultsHtml += `
+                                        <div class='accordion' id='${panelId}-ok-housings-accordion'>
+                                          <div class='accordion-item'>
+                                            <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
+                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                                ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
+                                              </button>
+                                            </h2>
+                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
+                                              <div class='accordion-body'>
+                                                <ul class='list-group'>`;
+                                    ok.forEach(h => {
+                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                            <div>
+                                                <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
+                                                <span style='color:#888;'>${h.name}</span>
+                                            </div>
+                                            <span class='badge bg-success rounded-pill'>
+                                                <i class='bi bi-check-circle'></i> photo ok
+                                            </span>
+                                        </li>`;
+                                    });
+                                    resultsHtml += `</ul></div></div></div></div>`;
+                                }
+                            } else {
+                                if (missing.length > 0) {
+                                    resultsHtml += `<div class='mb-2'><b>Hébergements avec photo manquante</b></div><ul class='list-group mb-3'>`;
+                                    missing.forEach(h => {
+                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                            <div>
+                                                <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
+                                                <span style='color:#888;'>${h.name}</span>
+                                            </div>
+                                            <span class='badge bg-danger rounded-pill'>
+                                                <i class='bi bi-exclamation-circle'></i> photo manquante
+                                            </span>
+                                        </li>`;
+                                    });
+                                    resultsHtml += `</ul>`;
+                                }
+                                if (ok.length > 0) {
+                                    const okCollapseId = `${panelId}-ok-housings-collapse`;
+                                    resultsHtml += `
+                                        <div class='accordion' id='${panelId}-ok-housings-accordion'>
+                                          <div class='accordion-item'>
+                                            <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
+                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                                ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
+                                              </button>
+                                            </h2>
+                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
+                                              <div class='accordion-body'>
+                                                <ul class='list-group'>`;
+                                    ok.forEach(h => {
+                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                            <div>
+                                                <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
+                                                <span style='color:#888;'>${h.name}</span>
+                                            </div>
+                                            <span class='badge bg-success rounded-pill'>
+                                                <i class='bi bi-check-circle'></i> photo ok
+                                            </span>
+                                        </li>`;
+                                    });
+                                    resultsHtml += `</ul></div></div></div></div>`;
+                                }
+                            }
+                            resultsHtml += `</div>`;
+                        }
+                        resultsHtml += `</div>`;
+                        if (!isActivities && !isHousings) {
+                            resultsHtml += `<button class="btn btn-outline-secondary mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-${panelId}">
+                                Afficher tous les détails
+                            </button>`;
+                        }
+                        resultsHtml += `</div>
+                                    <div class="collapse" id="details-${panelId}">
+                                        <div class="accordion" id="details-accordion-${panelId}">`;
+                        if (isRestaurants) {
+                            [
+                                {typ: 'Restaurants', arr: parkData.restaurants},
+                                {typ: 'Supermarches', arr: parkData.supermarches},
+                                {typ: 'Services', arr: parkData.services},
+                                {typ: 'Forfaits', arr: parkData.forfaits}
+                            ].forEach(({typ, arr}, idx) => {
+                                const items = Array.isArray(arr) ? arr : [];
+                                const typLabel = typ === 'Supermarches' ? 'Supermarchés & boutiques' : (typ === 'Forfaits' ? 'Forfaits' : (typ === 'Services' ? 'Services' : 'Restaurants'));
+                                const typPanelId = `details-${panelId}-${typ}`;
+                                resultsHtml += `
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="${typPanelId}-heading">
+                                                    <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#${typPanelId}-collapse" aria-expanded="${idx === 0 ? 'true' : 'false'}" aria-controls="${typPanelId}-collapse">
+                                                        ${typLabel} <span class="badge bg-primary ms-2">${items.length}</span>
+                                                    </button>
+                                                </h2>
+                                                <div id="${typPanelId}-collapse" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" aria-labelledby="${typPanelId}-heading" data-bs-parent="#details-accordion-${panelId}">
+                                                    <div class="accordion-body">
+                                                        <ul class="list-group">`;
+                                if (items.length > 0) {
+                                    items.forEach(r => {
+                                        resultsHtml += `<li class="list-group-item"><b>${r.name}</b><br>`;
+                                        if (r.description) resultsHtml += `<i>${r.description}</i><br>`;
+                                        if (r.cuisine_type) resultsHtml += `<b>Type :</b> ${r.cuisine_type}<br>`;
+                                        if (r.horaires) resultsHtml += `<b>Horaires :</b> ${r.horaires}<br>`;
+                                        if (r.link) resultsHtml += `<a href="${r.link}" target="_blank">Voir le menu</a><br>`;
+                                        if (r.images && r.images.length > 0) {
+                                            resultsHtml += r.images.filter(img => !!img).map(img => `<img src="${img}" alt="photo ${r.name}" style="max-width:120px;max-height:80px;margin:2px;" />`).join('');
+                                        }
+                                        resultsHtml += `</li>`;
+                                    });
+                                } else {
+                                    resultsHtml += `<li class="list-group-item">Aucun ${typLabel.toLowerCase()}</li>`;
+                                }
+                                resultsHtml += `</ul></div></div></div>`;
+                            });
+                        }
+                        resultsHtml += `</div>
                                     </div>
                                 </div>
-                            `).join('')}
-                        </div>
-                    </div>` + resultsHtml;
-            } else if (detailedResults) {
-                // Si il y a des problèmes, ajouter un résumé en haut
-                resultsHtml = `
-                    <div class="alert alert-warning mb-4">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-exclamation-triangle-fill"></i> 
-                                {{ translate('photos_missing') }}
                             </div>
-                            <button class="btn btn-sm btn-outline-warning" type="button" data-bs-toggle="collapse" data-bs-target="#details-${country.toLowerCase()}">
-                                {{ translate('show_details') }}
+                        </div>`;
+                        parcIndex++;
+                    }
+                }
+                resultsHtml += `</div>`;
+            } else {
+                let accordionId = `accordion-${country.toLowerCase()}`;
+                resultsHtml += `<div class="accordion mb-4" id="${accordionId}">`;
+                let parcIndex = 0;
+                for (const [parkName, parkData] of Object.entries(data.results[country] || {})) {
+                    let safePanel = safeId(parkName);
+                    let panelId = `${accordionId}-panel-${safePanel}`;
+                    let headingId = `${panelId}-heading`;
+                    let collapseId = `${panelId}-collapse`;
+                    let isOpen = false;
+                    resultsHtml += `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="${headingId}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                                ${parkName}
                             </button>
+                        </h2>
+                        <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#${accordionId}">
+                            <div class="accordion-body">
+                                <div class="mb-3">
+                                `;
+                    if (isRestaurants) {
+                        resultsHtml += `
+                                    <b>Restaurants</b>
+                                    <ul class="list-group mb-2">`;
+                        if (Array.isArray(parkData.restaurants) && parkData.restaurants.length > 0) {
+                            parkData.restaurants.forEach(r => {
+                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${r.name}
+                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                    </span>
+                                </li>`;
+                            });
+                        } else {
+                            resultsHtml += `<li class="list-group-item">Aucun restaurant</li>`;
+                        }
+                        resultsHtml += `</ul>
+                                    <b>Supermarchés & boutiques</b>
+                                    <ul class="list-group mb-2">`;
+                        if (Array.isArray(parkData.supermarches) && parkData.supermarches.length > 0) {
+                            parkData.supermarches.forEach(r => {
+                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${r.name}
+                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                    </span>
+                                </li>`;
+                            });
+                        } else {
+                            resultsHtml += `<li class="list-group-item">Aucun supermarché</li>`;
+                        }
+                        resultsHtml += `</ul>
+                                    <b>Services</b>
+                                    <ul class="list-group mb-2">`;
+                        if (Array.isArray(parkData.services) && parkData.services.length > 0) {
+                            parkData.services.forEach(r => {
+                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${r.name}
+                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                    </span>
+                                </li>`;
+                            });
+                        } else {
+                            resultsHtml += `<li class="list-group-item">Aucun service</li>`;
+                        }
+                        resultsHtml += `</ul>
+                                    <b>Forfaits</b>
+                                    <ul class="list-group mb-2">`;
+                        if (Array.isArray(parkData.forfaits) && parkData.forfaits.length > 0) {
+                            parkData.forfaits.forEach(r => {
+                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${r.name}
+                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
+                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
+                                    </span>
+                                </li>`;
+                            });
+                        } else {
+                            resultsHtml += `<li class="list-group-item">Aucun forfait</li>`;
+                        }
+                        resultsHtml += `</ul>`;
+                    }
+                    if (isActivities) {
+                        const activities = Array.isArray(parkData.activities) ? parkData.activities : [];
+                        const missing = activities.filter(a => !a.image_src || a.image_src.includes('default'));
+                        const ok = activities.filter(a => a.image_src && !a.image_src.includes('default'));
+                        const allPhotosOk = activities.length > 0 && missing.length === 0;
+                        resultsHtml += `<div>`;
+                        if (activities.length === 0) {
+                            resultsHtml += `<div class='alert alert-secondary'>Aucune activité trouvée.</div>`;
+                        } else if (allPhotosOk) {
+                            // Message multilingue selon la langue courante
+                            let msg = (lang === 'en')
+                                ? 'All activities in this park have a valid photo.'
+                                : 'Toutes les activités de ce parc possèdent une photo valide.';
+                            resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
+                            if (ok.length > 0) {
+                                const okCollapseId = `${panelId}-ok-activities-collapse`;
+                                resultsHtml += `
+                                    <div class='accordion' id='${panelId}-ok-accordion'>
+                                      <div class='accordion-item'>
+                                        <h2 class='accordion-header' id='${panelId}-ok-heading'>
+                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                            ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
+                                          </button>
+                                        </h2>
+                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
+                                          <div class='accordion-body'>
+                                            <ul class='list-group'>`;
+                                ok.forEach(a => {
+                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                        ${a.name}
+                                        <span class='badge bg-success rounded-pill'>
+                                            <i class='bi bi-check-circle'></i> photo ok
+                                        </span>
+                                    </li>`;
+                                });
+                                resultsHtml += `</ul></div></div></div></div>`;
+                            }
+                        } else {
+                            if (missing.length > 0) {
+                                resultsHtml += `<div class='mb-2'><b>${lang === 'en' ? 'Activities with missing pictures' : 'Activités avec photo manquante'}</b></div><ul class='list-group mb-3'>`;
+                                missing.forEach(a => {
+                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                        ${a.name}
+                                        <span class='badge bg-danger rounded-pill'>
+                                            <i class='bi bi-exclamation-circle'></i> photo manquante
+                                        </span>
+                                    </li>`;
+                                });
+                                resultsHtml += `</ul>`;
+                            }
+                            if (ok.length > 0) {
+                                const okCollapseId = `${panelId}-ok-activities-collapse`;
+                                resultsHtml += `
+                                    <div class='accordion' id='${panelId}-ok-accordion'>
+                                      <div class='accordion-item'>
+                                        <h2 class='accordion-header' id='${panelId}-ok-heading'>
+                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                            ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
+                                          </button>
+                                        </h2>
+                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
+                                          <div class='accordion-body'>
+                                            <ul class='list-group'>`;
+                                ok.forEach(a => {
+                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                        ${a.name}
+                                        <span class='badge bg-success rounded-pill'>
+                                            <i class='bi bi-check-circle'></i> photo ok
+                                        </span>
+                                    </li>`;
+                                });
+                                resultsHtml += `</ul></div></div></div></div>`;
+                            }
+                        }
+                        resultsHtml += `</div>`;
+                    }
+                    if (isHousings) {
+                        const housings = Array.isArray(parkData.housings) ? parkData.housings : [];
+                        const missing = housings.filter(h => !h.image_src || h.image_src.includes('default'));
+                        const ok = housings.filter(h => h.image_src && !h.image_src.includes('default'));
+                        const allPhotosOk = housings.length > 0 && missing.length === 0;
+                        resultsHtml += `<div>`;
+                        if (housings.length === 0) {
+                            resultsHtml += `<div class='alert alert-secondary'>Aucun hébergement trouvé.</div>`;
+                        } else if (allPhotosOk) {
+                            // Message multilingue selon la langue courante
+                            let msg = (lang === 'en')
+                                ? 'All accommodations in this park have a valid photo.'
+                                : 'Tous les hébergements de ce parc possèdent une photo valide.';
+                            resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
+                            if (ok.length > 0) {
+                                const okCollapseId = `${panelId}-ok-housings-collapse`;
+                                resultsHtml += `
+                                    <div class='accordion' id='${panelId}-ok-housings-accordion'>
+                                      <div class='accordion-item'>
+                                        <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
+                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                            ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
+                                          </button>
+                                        </h2>
+                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
+                                          <div class='accordion-body'>
+                                            <ul class='list-group'>`;
+                                ok.forEach(h => {
+                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                        <div>
+                                            <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
+                                            <span style='color:#888;'>${h.name}</span>
+                                        </div>
+                                        <span class='badge bg-success rounded-pill'>
+                                            <i class='bi bi-check-circle'></i> photo ok
+                                        </span>
+                                    </li>`;
+                                });
+                                resultsHtml += `</ul></div></div></div></div>`;
+                            }
+                        } else {
+                            if (missing.length > 0) {
+                                resultsHtml += `<div class='mb-2'><b>Hébergements avec photo manquante</b></div><ul class='list-group mb-3'>`;
+                                missing.forEach(h => {
+                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                        <div>
+                                            <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
+                                            <span style='color:#888;'>${h.name}</span>
+                                        </div>
+                                        <span class='badge bg-danger rounded-pill'>
+                                            <i class='bi bi-exclamation-circle'></i> photo manquante
+                                        </span>
+                                    </li>`;
+                                });
+                                resultsHtml += `</ul>`;
+                            }
+                            if (ok.length > 0) {
+                                const okCollapseId = `${panelId}-ok-housings-collapse`;
+                                resultsHtml += `
+                                    <div class='accordion' id='${panelId}-ok-housings-accordion'>
+                                      <div class='accordion-item'>
+                                        <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
+                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
+                                            ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
+                                          </button>
+                                        </h2>
+                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
+                                          <div class='accordion-body'>
+                                            <ul class='list-group'>`;
+                                ok.forEach(h => {
+                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
+                                        <div>
+                                            <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
+                                            <span style='color:#888;'>${h.name}</span>
+                                        </div>
+                                        <span class='badge bg-success rounded-pill'>
+                                            <i class='bi bi-check-circle'></i> photo ok
+                                        </span>
+                                    </li>`;
+                                });
+                                resultsHtml += `</ul></div></div></div></div>`;
+                            }
+                        }
+                        resultsHtml += `</div>`;
+                    }
+                    resultsHtml += `</div>
+                                <div class="collapse" id="details-${panelId}">
+                                    <div class="accordion" id="details-accordion-${panelId}">`;
+                    if (isRestaurants) {
+                        [
+                            {typ: 'Restaurants', arr: parkData.restaurants},
+                            {typ: 'Supermarches', arr: parkData.supermarches},
+                            {typ: 'Services', arr: parkData.services},
+                            {typ: 'Forfaits', arr: parkData.forfaits}
+                        ].forEach(({typ, arr}, idx) => {
+                            const items = Array.isArray(arr) ? arr : [];
+                            const typLabel = typ === 'Supermarches' ? 'Supermarchés & boutiques' : (typ === 'Forfaits' ? 'Forfaits' : (typ === 'Services' ? 'Services' : 'Restaurants'));
+                            const typPanelId = `details-${panelId}-${typ}`;
+                            resultsHtml += `
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="${typPanelId}-heading">
+                                                <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#${typPanelId}-collapse" aria-expanded="${idx === 0 ? 'true' : 'false'}" aria-controls="${typPanelId}-collapse">
+                                                    ${typLabel} <span class="badge bg-primary ms-2">${items.length}</span>
+                                                </button>
+                                            </h2>
+                                            <div id="${typPanelId}-collapse" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" aria-labelledby="${typPanelId}-heading" data-bs-parent="#details-accordion-${panelId}">
+                                                <div class="accordion-body">
+                                                    <ul class="list-group">`;
+                            if (items.length > 0) {
+                                items.forEach(r => {
+                                    resultsHtml += `<li class="list-group-item"><b>${r.name}</b><br>`;
+                                    if (r.description) resultsHtml += `<i>${r.description}</i><br>`;
+                                    if (r.cuisine_type) resultsHtml += `<b>Type :</b> ${r.cuisine_type}<br>`;
+                                    if (r.horaires) resultsHtml += `<b>Horaires :</b> ${r.horaires}<br>`;
+                                    if (r.link) resultsHtml += `<a href="${r.link}" target="_blank">Voir le menu</a><br>`;
+                                    if (r.images && r.images.length > 0) {
+                                        resultsHtml += r.images.filter(img => !!img).map(img => `<img src="${img}" alt="photo ${r.name}" style="max-width:120px;max-height:80px;margin:2px;" />`).join('');
+                                    }
+                                    resultsHtml += `</li>`;
+                                });
+                            } else {
+                                resultsHtml += `<li class="list-group-item">Aucun ${typLabel.toLowerCase()}</li>`;
+                            }
+                            resultsHtml += `</ul></div></div></div>`;
+                        });
+                    }
+                    resultsHtml += `</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="collapse" id="details-${country.toLowerCase()}">
-                        <div class="card card-body mb-4">
-                            ${detailedResults}
-                        </div>
-                    </div>` + resultsHtml;
+                    </div>`;
+                    parcIndex++;
+                }
+                resultsHtml += `</div>`;
             }
 
             // Afficher les résultats
             resultsContainer.innerHTML = resultsHtml;
             resultsContainer.style.display = 'block';
-            
             // Mettre à jour les traductions
             updateTranslations(resultsContainer);
-            
             // Marquer comme chargé
             tabPane.setAttribute('data-loaded', 'true');
 

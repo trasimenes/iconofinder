@@ -61,69 +61,43 @@ class ActivityService:
             print("\nÉchantillon du HTML:")
             print(soup.prettify()[:1000])
             
-            # Liste pour stocker les activités avec photos manquantes
-            activities_with_placeholders = []
+            all_activities = []
             no_missing_photos = True
-            
             for block in activity_blocks:
                 # Chercher l'image avec différentes approches
                 img = None
-                
-                # 1. Chercher directement dans le bloc
                 img = block.find('img')
-                
-                # 2. Chercher dans un conteneur d'image
                 if not img:
                     img_container = block.find(class_=lambda x: x and ('image' in x.lower() or 'photo' in x.lower()))
                     if img_container:
                         img = img_container.find('img')
-                
                 if not img:
                     continue
-                
                 # Récupérer le titre de l'activité - essayer plusieurs sélecteurs
                 title = None
-                
-                # 1. Chercher dans les attributs de l'image
                 if img.get('alt'):
                     title = type('Title', (), {'text': img.get('alt')})()
-                
-                # 2. Chercher dans les titres
                 if not title:
                     for heading in ['h2', 'h3', 'h4', 'h5']:
                         title_elem = block.find(heading)
                         if title_elem:
                             title = title_elem
                             break
-                
-                # 3. Chercher dans les spans/divs avec class contenant "title" ou "name"
                 if not title:
                     title = block.find(class_=lambda x: x and ('title' in x.lower() or 'name' in x.lower()))
-                
-                # 4. Si toujours pas trouvé, prendre le texte du bloc
                 if not title:
                     text_content = block.get_text(strip=True)
                     if text_content:
                         title = type('Title', (), {'text': text_content})()
-                
                 activity_name = title.text.strip() if title else "Activité sans nom"
-                
-                # Vérifier les différentes sources d'images possibles
                 src = img.get('src', '')
                 data_src = img.get('data-src', '')
                 data_url_desktop = img.get('data-url-desktop', '')
-                
                 print(f"\nAnalyse de l'activité: {activity_name}")
                 print(f"- src: {src}")
                 print(f"- data-src: {data_src}")
                 print(f"- data-url-desktop: {data_url_desktop}")
-                
-                # Une image est considérée comme manquante si:
-                # 1. Elle n'a pas de source du tout
-                # 2. Elle utilise une image par défaut
-                # 3. Elle a une source vide
                 is_missing = False
-                
                 if not (src or data_src or data_url_desktop):
                     is_missing = True
                     print("❌ Aucune source d'image trouvée")
@@ -135,16 +109,15 @@ class ActivityService:
                     print("❌ Sources d'images vides")
                 else:
                     print("✅ Image valide trouvée")
-                
                 if is_missing:
                     no_missing_photos = False
-                    activities_with_placeholders.append({
-                        'name': activity_name,
-                        'image_src': src or data_src or data_url_desktop or "Pas d'URL d'image"
-                    })
-            
+                all_activities.append({
+                    'name': activity_name,
+                    'image_src': src or data_src or data_url_desktop or "Pas d'URL d'image",
+                    'has_photo': not is_missing
+                })
             return {
-                'activities': activities_with_placeholders,
+                'activities': all_activities,
                 'no_missing_photos': no_missing_photos
             }
             

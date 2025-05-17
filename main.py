@@ -33,115 +33,88 @@ def save_snapshots(snapshots):
     with open(SNAPSHOT_FILE, 'w', encoding='utf-8') as f:
         json.dump(snapshots, f, ensure_ascii=False, indent=2)
 
-def search_activities(country, parc):
-    """Recherche les activités avec photos manquantes"""
-    print("\n=== RECHERCHE D'ACTIVITÉS ===")
-    print(f"Pays: {country}")
-    print(f"Parc: {parc}")
-    
+def search_activities(country, parc, logs=None):
+    if logs is None:
+        logs = []
+    logs.append(f"[ACTIVITÉS] Début recherche pour {country} - {parc}")
     final_results = {}
     countries_to_process = [country] if country != "Tous" else PARKS_URLS.keys()
-
     for current_country in countries_to_process:
         if parc == "Tous":
-            print(f"\nRecherche pour tous les parcs de {current_country}:")
-            # Traiter tous les parcs du pays sélectionné
             all_parks_results = {}
             for park_name, park_urls in PARKS_URLS.get(current_country, {}).items():
                 activities_url = park_urls.get("activities")
                 if activities_url:
-                    print(f"🎯 Recherche dans {park_name}: {activities_url}")
+                    logs.append(f"[ACTIVITÉS] {current_country} - {park_name}")
                     result = activity_service.get_activities_with_placeholders(activities_url)
                     result["url"] = activities_url
-                    # Ajouter le parc même s'il n'a pas d'activités avec photos manquantes
                     all_parks_results[park_name] = result
-            
-            if all_parks_results:  # Si on a trouvé au moins un parc
+            if all_parks_results:
                 final_results[current_country] = all_parks_results
         else:
             activities_url = PARKS_URLS.get(current_country, {}).get(parc, {}).get("activities")
             if activities_url:
-                print(f"\nRecherche pour {parc} dans {current_country}:")
-                print(f"🎯 URL: {activities_url}")
+                logs.append(f"[ACTIVITÉS] {current_country} - {parc}")
                 result = activity_service.get_activities_with_placeholders(activities_url)
                 result["url"] = activities_url
-                # Ajouter le parc même s'il n'a pas d'activités avec photos manquantes
                 final_results[current_country] = {parc: result}
-    
+    logs.append(f"[ACTIVITÉS] Fin recherche pour {country} - {parc}")
     return final_results
 
-def search_housings(country, parc):
-    """Recherche les hébergements avec photos manquantes"""
-    print("\n=== RECHERCHE D'HÉBERGEMENTS ===")
-    print(f"Pays: {country}")
-    print(f"Parc: {parc}")
-    
+def search_housings(country, parc, logs=None):
+    if logs is None:
+        logs = []
+    logs.append(f"[HÉBERGEMENTS] Début recherche pour {country} - {parc}")
     final_results = {}
     countries_to_process = [country] if country != "Tous" else PARKS_URLS.keys()
-
     for current_country in countries_to_process:
         if parc == "Tous":
-            print(f"\nRecherche pour tous les parcs de {current_country}:")
-            # Traiter tous les parcs du pays sélectionné
             all_parks_results = {}
             for park_name, park_urls in PARKS_URLS.get(current_country, {}).items():
                 cottages_url = park_urls.get("cottages")
                 if cottages_url:
-                    print(f"🏠 Recherche dans {park_name}: {cottages_url}")
+                    logs.append(f"[HÉBERGEMENTS] {current_country} - {park_name}")
                     result = housing_service.get_housings_with_placeholders(cottages_url)
                     result["url"] = cottages_url
-                    # Ajouter le parc même s'il n'a pas d'hébergements avec photos manquantes
                     all_parks_results[park_name] = result
-            
-            if all_parks_results:  # Si on a trouvé au moins un parc
+            if all_parks_results:
                 final_results[current_country] = all_parks_results
         else:
             cottages_url = PARKS_URLS.get(current_country, {}).get(parc, {}).get("cottages")
             if cottages_url:
-                print(f"\nRecherche pour {parc} dans {current_country}:")
-                print(f"🏠 URL: {cottages_url}")
+                logs.append(f"[HÉBERGEMENTS] {current_country} - {parc}")
                 result = housing_service.get_housings_with_placeholders(cottages_url)
                 result["url"] = cottages_url
-                # Ajouter le parc même s'il n'a pas d'hébergements avec photos manquantes
                 final_results[current_country] = {parc: result}
-    
+    logs.append(f"[HÉBERGEMENTS] Fin recherche pour {country} - {parc}")
     return final_results
 
-def search_restaurants(country, parc):
-    """Recherche les restaurants avec photos manquantes"""
-    print("\n=== RECHERCHE DE RESTAURANTS ===")
-    print(f"Pays: {country}")
-    print(f"Parc: {parc}")
-    
+def search_restaurants(country, parc, logs=None):
+    if logs is None:
+        logs = []
+    logs.append(f"[RESTAURANTS] Début recherche pour {country} - {parc}")
     final_results = {}
     countries_to_process = [country] if country != "Tous" else PARKS_URLS.keys()
-
     for current_country in countries_to_process:
         if parc == "Tous":
-            print(f"\nRecherche pour tous les parcs de {current_country}:")
-            # Traiter tous les parcs du pays sélectionné
             all_parks_results = {}
             for park_name, park_urls in PARKS_URLS.get(current_country, {}).items():
                 restaurants_url = park_urls.get("restaurants")
                 if restaurants_url:
-                    print(f"🍽️ Recherche dans {park_name}: {restaurants_url}")
+                    logs.append(f"[RESTAURANTS] {current_country} - {park_name}")
                     result = restaurant_service.get_restaurants_with_placeholders(restaurants_url)
                     result["url"] = restaurants_url
-                    # Ajouter le parc même s'il n'a pas de restaurants avec photos manquantes
                     all_parks_results[park_name] = result
-            
-            if all_parks_results:  # Si on a trouvé au moins un parc
+            if all_parks_results:
                 final_results[current_country] = all_parks_results
         else:
             restaurants_url = PARKS_URLS.get(current_country, {}).get(parc, {}).get("restaurants")
             if restaurants_url:
-                print(f"\nRecherche pour {parc} dans {current_country}:")
-                print(f"🍽️ URL: {restaurants_url}")
+                logs.append(f"[RESTAURANTS] {current_country} - {parc}")
                 result = restaurant_service.get_restaurants_with_placeholders(restaurants_url)
                 result["url"] = restaurants_url
-                # Ajouter le parc même s'il n'a pas de restaurants avec photos manquantes
                 final_results[current_country] = {parc: result}
-    
+    logs.append(f"[RESTAURANTS] Fin recherche pour {country} - {parc}")
     return final_results
 
 def format_park_name(name):
@@ -206,30 +179,25 @@ def recherche():
 
 @app.route('/api/search')
 def api_search():
-    """
-    Route API pour la recherche asynchrone
-    Retourne les résultats pour un pays spécifique
-    """
+    logs = []
     country = request.args.get('country')
     parc = request.args.get('parc')
     search_type = request.args.get('type')
-    
     if not all([country, parc, search_type]):
-        return jsonify({'error': 'Paramètres manquants'})
-
+        return jsonify({'error': 'Paramètres manquants', 'logs': logs})
     try:
         if search_type == "Hébergements":
-            results = search_housings(country, parc)
+            results = search_housings(country, parc, logs=logs)
         elif search_type == "Activités":
-            results = search_activities(country, parc)
+            results = search_activities(country, parc, logs=logs)
         elif search_type == "Restaurants":
-            results = search_restaurants(country, parc)
+            results = search_restaurants(country, parc, logs=logs)
         else:
-            return jsonify({'error': 'Type de recherche non valide'})
-        
-        return jsonify(results)
+            return jsonify({'error': 'Type de recherche non valide', 'logs': logs})
+        return jsonify(results=results, logs=logs)
     except Exception as e:
-        return jsonify({'error': str(e)})
+        logs.append(f"[ERREUR] {str(e)}")
+        return jsonify({'error': str(e), 'logs': logs})
 
 @app.route('/results')
 def results():
@@ -322,7 +290,7 @@ def create_snapshot():
     }
     snapshots.append(new_snapshot)
     save_snapshots(snapshots)
-    return redirect(url_for('snapshot_manager'))
+    return redirect(url_for('snapshot_manager', status='success'))
 
 @app.route('/snapshots/delete/<int:snap_id>', methods=['GET'])
 def delete_snapshot(snap_id):
@@ -349,15 +317,26 @@ def create_snapshot_async():
 
 @app.route('/snapshots/progress')
 def snapshot_progress():
-    if not os.path.exists(PROGRESS_FILE):
-        return jsonify({"activities": 0, "housings": 0, "restaurants": 0, "status": "En attente…", "done": False})
-    with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
-        return jsonify(json.load(f))
+    try:
+        if not os.path.exists(PROGRESS_FILE):
+            return jsonify({"activities": 0, "housings": 0, "restaurants": 0, "status": "En attente…", "done": False, "logs": []})
+        with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if not content.strip():
+                # Fichier vide, on retourne un état d'attente
+                return jsonify({"activities": 0, "housings": 0, "restaurants": 0, "status": "En attente…", "done": False, "logs": []})
+            return jsonify(json.loads(content))
+    except Exception as e:
+        return jsonify({"activities": 0, "housings": 0, "restaurants": 0, "status": f"Erreur: {str(e)}", "done": False, "logs": []}), 200
 
 def run_snapshot_creation():
-    progress = {"activities": 0, "housings": 0, "restaurants": 0, "status": "Démarrage…", "done": False}
-    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(progress, f)
+    progress = {"activities": 0, "housings": 0, "restaurants": 0, "status": "Démarrage…", "done": False, "logs": []}
+    def log(msg):
+        print(msg)
+        progress["logs"].append(msg)
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(progress, f)
+    log("Début de la création du snapshot")
     # 1. Activités
     progress["status"] = "Recherche des activités…"
     with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
@@ -367,6 +346,7 @@ def run_snapshot_creation():
     all_parks = [(country, park) for country in countries for park in PARKS_URLS[country].keys()]
     total = len(all_parks)
     for i, (country, park) in enumerate(all_parks):
+        log(f"[ACTIVITÉS] {country} - {park}")
         activities.setdefault(country, {})[park] = activity_service.get_activities_with_placeholders(PARKS_URLS[country][park]["activities"])
         progress["activities"] = int((i+1)/total*100)
         with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
@@ -377,6 +357,7 @@ def run_snapshot_creation():
         json.dump(progress, f)
     housings = {}
     for i, (country, park) in enumerate(all_parks):
+        log(f"[HÉBERGEMENTS] {country} - {park}")
         housings.setdefault(country, {})[park] = housing_service.get_housings_with_placeholders(PARKS_URLS[country][park]["cottages"])
         progress["housings"] = int((i+1)/total*100)
         with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
@@ -387,11 +368,13 @@ def run_snapshot_creation():
         json.dump(progress, f)
     restaurants = {}
     for i, (country, park) in enumerate(all_parks):
+        log(f"[RESTAURANTS] {country} - {park}")
         restaurants.setdefault(country, {})[park] = restaurant_service.get_restaurants_with_placeholders(PARKS_URLS[country][park]["restaurants"])
         progress["restaurants"] = int((i+1)/total*100)
         with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
             json.dump(progress, f)
     # Finalisation
+    log("Fin de la création du snapshot")
     progress["status"] = "Sauvegarde du snapshot…"
     with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
         json.dump(progress, f)
@@ -414,7 +397,6 @@ def run_snapshot_creation():
     progress["done"] = True
     with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
         json.dump(progress, f)
-    # Nettoyage du fichier d'avancement après quelques secondes
     time.sleep(3)
     if os.path.exists(PROGRESS_FILE):
         os.remove(PROGRESS_FILE)
