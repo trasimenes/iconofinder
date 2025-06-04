@@ -334,7 +334,29 @@ def stats_view():
         return render_template('stats.html', stats=None, translate=get_translation)
     data = snapshots[-1]['data']
     stats_data = compute_stats(data)
-    return render_template('stats.html', stats=stats_data, translate=get_translation)
+    refreshed_at = request.args.get('refreshed')
+    return render_template('stats.html', stats=stats_data, translate=get_translation, refreshed_at=refreshed_at)
+
+@app.route('/stats/refresh')
+def refresh_stats():
+    snapshots = load_snapshots()
+    new_id = 1 + max([s.get('id', 0) for s in snapshots], default=0)
+    activities = search_activities('Tous', 'Tous')
+    housings = search_housings('Tous', 'Tous')
+    restaurants = search_restaurants('Tous', 'Tous')
+    new_snapshot = {
+        'id': new_id,
+        'name': f'Snapshot {new_id}',
+        'created_at': datetime.datetime.now().isoformat(sep=' ', timespec='seconds'),
+        'data': {
+            'activities': activities,
+            'housings': housings,
+            'restaurants': restaurants
+        },
+    }
+    snapshots.append(new_snapshot)
+    save_snapshots(snapshots)
+    return redirect(url_for('stats_view', refreshed=new_snapshot['created_at']))
 
 @app.route('/snapshots', methods=['GET'])
 def snapshot_manager():

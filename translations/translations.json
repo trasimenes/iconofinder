@@ -84,7 +84,9 @@
       "stats_title": "Missing photos statistics",
       "housing_types_most_missing": "Housing types with most missing photos",
       "no_snapshot_available": "No snapshot available",
-      "country": "Country"
+      "country": "Country",
+      "refresh_stats": "Refresh statistics",
+      "stats_refreshed": "Information updated since last snapshot on"
     },
     "fr": {
       "welcome_message": "Bienvenue sur l'Iconofinder de Center Parcs",
@@ -171,6 +173,8 @@
       "stats_title": "Statistiques des photos manquantes",
       "housing_types_most_missing": "Typologies d'hébergements les plus concernées",
       "no_snapshot_available": "Aucun snapshot disponible",
-      "country": "Pays"
+      "country": "Pays",
+      "refresh_stats": "Rafraîchir les statistiques",
+      "stats_refreshed": "Les informations ont été actualisées depuis le dernier snapshot le"
     }
 }
