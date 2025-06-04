@@ -32,7 +32,11 @@ def compute_stats(snapshot_data):
     for country, parks in snapshot_data.get('restaurants', {}).items():
         for park_data in parks.values():
             for item in park_data.get('restaurants', []):
-                missing = not item.get('has_photos') or len(item.get('images', [])) == 0
+                missing = (
+                    not item.get('has_photos')
+                    or default_fragment in item.get('image_src', '')
+                    or len(item.get('images', [])) == 0
+                )
                 if missing:
                     stats['restaurants'][country] = stats['restaurants'].get(country, 0) + 1
                     stats['total_restaurants'] += 1
