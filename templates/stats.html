@@ -7,25 +7,132 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+    <style>
+    /* CSS3 Tabs */
+    .pcss3t {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: none;
+        font-size: 0;
+        text-align: left;
+    }
+    .pcss3t > input {
+        position: absolute;
+        left: -9999px;
+    }
+    .pcss3t > label {
+        position: relative;
+        display: inline-block;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.1s;
+    }
+    .pcss3t > input:checked + label {
+        cursor: default;
+    }
+    .pcss3t > ul {
+        list-style: none;
+        position: relative;
+        display: block;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: none;
+        font-size: 13px;
+    }
+    .pcss3t > ul > li {
+        position: absolute;
+        width: 100%;
+        overflow: auto;
+        padding: 30px 40px 40px;
+        box-sizing: border-box;
+        opacity: 0;
+        transition: all 0.5s;
+    }
+    .pcss3t > .tab-content-1:checked ~ ul .tab-content-1,
+    .pcss3t > .tab-content-2:checked ~ ul .tab-content-2,
+    .pcss3t > .tab-content-3:checked ~ ul .tab-content-3,
+    .pcss3t > .tab-content-4:checked ~ ul .tab-content-4,
+    .pcss3t > .tab-content-5:checked ~ ul .tab-content-5 {
+        z-index: 1;
+        top: 0;
+        left: 0;
+        opacity: 1;
+        transform: scale(1,1);
+    }
+    
+    /* Theme 1 */
+    .pcss3t-theme-1 > label {
+        margin: 0 5px 5px 0;
+        padding: 0 20px;
+        border-radius: 5px;
+        background: #fff;
+        box-shadow: 0 2px rgba(0,0,0,0.2);
+        color: #808080;
+        opacity: 0.8;
+        font-size: 13px;
+        line-height: 49px;
+    }
+    .pcss3t-theme-1 > label:hover {
+        background: #fff;
+        opacity: 1;
+    }
+    .pcss3t-theme-1 > input:checked + label {
+        margin-bottom: 0;
+        padding-bottom: 5px;
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+        color: #2b82d9;
+        opacity: 1;
+    }
+    .pcss3t-theme-1 > ul {
+        background: #fff;
+        border-radius: 5px;
+        box-shadow: 0 3px rgba(0,0,0,0.2);
+        height: 200px;
+    }
+    .pcss3t-theme-1 > ul > li {
+        height: 200px;
+    }
+    .pcss3t-theme-1 > .tab-content-1:checked ~ ul {
+        border-top-left-radius: 0;
+    }
+    
+    /* Effect scale */
+    .pcss3t-effect-scale > ul > li {
+        transform: scale(0.1,0.1);
+    }
+    </style>
 </head>
 <body>
-    <nav class="navbar">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Nyan Cat" class="nyan-cat">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Nyan Cat" style="height:32px;margin-right:10px;">
+                Accueil
             </a>
-            <a href="/snapshots" class="btn btn-primary ms-3">
-                <i class="bi bi-archive"></i> Snapshots
-            </a>
-            <a href="/stats" class="btn btn-success ms-3">
-                <i class="bi bi-bar-chart"></i> {{ translate('stats') }}
-            </a>
-            <div class="switch" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
-                <div class="switch-labels">
-                    <span class="fr">FR</span>
-                    <span class="en">EN</span>
+            <div class="d-flex align-items-center ms-auto">
+                <a href="/snapshots" class="btn btn-outline-light mx-2">
+                    <i class="bi bi-archive"></i> Snapshots
+                </a>
+                <a href="/stats" class="btn btn-outline-light mx-2">
+                    <i class="bi bi-graph-up"></i> {{ translate('stats') }}
+                </a>
+                <a href="/dashboard" class="btn btn-outline-light mx-2">
+                    <i class="bi bi-bar-chart"></i> Dashboard
+                </a>
+                <div class="switch ms-3" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
+                    <div class="switch-labels">
+                        <span class="fr">FR</span>
+                        <span class="en">EN</span>
+                    </div>
+                    <div class="switch-handle"></div>
                 </div>
-                <div class="switch-handle"></div>
             </div>
         </div>
     </nav>
@@ -42,28 +149,30 @@
         {% if not stats %}
             <p>{{ translate('no_snapshot_available') }}</p>
         {% else %}
-            <header class="row text-center mb-4">
-                <div class="col-md-4 mb-3">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ translate('activities') }}</h5>
-                            <p class="display-6 mb-0">{{ stats.total_activities }}</p>
+            <header class="mb-4">
+                <div class="row g-3">
+                    <div class="col-lg-4 col-md-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ translate('activities') }}</h5>
+                                <p class="display-6 mb-0">{{ stats.total_activities }}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ translate('accommodations') }}</h5>
-                            <p class="display-6 mb-0">{{ stats.total_housings }}</p>
+                    <div class="col-lg-4 col-md-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ translate('accommodations') }}</h5>
+                                <p class="display-6 mb-0">{{ stats.total_housings }}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ translate('restaurants') }}</h5>
-                            <p class="display-6 mb-0">{{ stats.total_restaurants }}</p>
+                    <div class="col-lg-4 col-md-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ translate('restaurants') }}</h5>
+                                <p class="display-6 mb-0">{{ stats.total_restaurants }}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -90,32 +199,58 @@
                 </tbody>
             </table>
             <h2 class="mt-4">{{ translate('top_missing_activities') }}</h2>
-            <ul>
-                {% for name, count in stats.top_activities %}
-                <li>{{ name }}: {{ count }}</li>
-                {% endfor %}
-            </ul>
+            <div class="mb-4">
+                {% if stats.top_activities_by_country %}
+                    <!-- CSS3 Tabs -->
+                    <div class="pcss3t pcss3t-effect-scale pcss3t-theme-1">
+                        {% for country, activities in stats.top_activities_by_country.items() %}
+                        <input type="radio" name="countries" {% if loop.first %}checked{% endif %} id="country{{ loop.index }}" class="tab-content-{{ loop.index }}">
+                        <label for="country{{ loop.index }}">{{ country }}</label>
+                        {% endfor %}
+                        
+                        <ul>
+                            {% for country, activities in stats.top_activities_by_country.items() %}
+                            <li class="tab-content tab-content-{{ loop.index }} typography">
+                                {% if activities %}
+                                    {% for name, count in activities %}
+                                        <div class="bg-white rounded p-3 mb-2 border text-center">{{ name }} : {{ count }}</div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-muted">{{ translate('no_missing_activities_for_country') }} {{ country }}</div>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <!--/ CSS3 Tabs -->
+                {% else %}
+                    <div class="text-muted">{{ translate('no_activities_concerned') }}</div>
+                {% endif %}
+            </div>
 
             <h2 class="mt-4">{{ translate('top_missing_housings') }}</h2>
-            <ul>
-                {% for name, count in stats.top_housings %}
-                <li>{{ name }}: {{ count }}</li>
-                {% endfor %}
-            </ul>
+            <div class="mb-4">
+                {% if stats.top_housings %}
+                    {% for name, count in stats.top_housings %}
+                        <div class="bg-white rounded p-3 mb-2 border text-center">{{ name }} : {{ count }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-muted">{{ translate('no_accommodations_concerned') }}</div>
+                {% endif %}
+            </div>
 
             <h2 class="mt-4">{{ translate('top_missing_restaurants') }}</h2>
-            <ul>
-                {% for name, count in stats.top_restaurants %}
-                <li>{{ name }}: {{ count }}</li>
-                {% endfor %}
-            </ul>
+            <div class="mb-4">
+                {% if stats.top_restaurants %}
+                    {% for name, count in stats.top_restaurants %}
+                        <div class="bg-white rounded p-3 mb-2 border text-center">{{ name }} : {{ count }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-muted">{{ translate('no_restaurants_concerned') }}</div>
+                {% endif %}
+            </div>
 
-            <h2 class="mt-4">{{ translate('top_missing_items') }}</h2>
-            <ul>
-                {% for name, count in stats.top_missing_items %}
-                <li>{{ name }}: {{ count }}</li>
-                {% endfor %}
-            </ul>
+
 
             <h2 class="mt-4">{{ translate('housing_types_most_missing') }}</h2>
             <ul>

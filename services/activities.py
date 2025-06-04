@@ -114,7 +114,7 @@ class ActivityService:
                 all_activities.append({
                     'name': activity_name,
                     'image_src': src or data_src or data_url_desktop or "Pas d'URL d'image",
-                    'has_photo': not is_missing
+                    'has_photos': not is_missing
                 })
             return {
                 'activities': all_activities,

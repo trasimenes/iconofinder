@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container py-4">
   <div class="page-title-area d-flex flex-column flex-md-row justify-content-center align-items-center mb-4">
-    <h4 class="page-title pt-sm fw-bold text-center me-md-4 mb-3 mb-md-0">Dashboard Center Parcs</h4>
+    <h4 class="page-title pt-sm fw-bold text-center me-md-4 mb-3 mb-md-0" data-translate="dashboard">Dashboard Center Parcs</h4>
     <form class="d-flex align-items-center gap-2 justify-content-center">
       <div class="input-group input-group-sm">
         <input type="text" class="form-control" id="dash-daterange" placeholder="Select date">
@@ -29,7 +29,7 @@
               <div class="card-icon-bg mb-2 mx-auto">
                 <i class="bi bi-image card-info-icon"></i>
               </div>
-              <h5 class="card-info-title">Photos manquantes</h5>
+              <h5 class="card-info-title" data-translate="missing_photos">Photos manquantes</h5>
               <h3 class="card-count fs-28">{{ missing_photos }}</h3>
               <p class="mb-0">
                 <span class="text-danger me-2"><i class="bi-arrow-down"></i> -</span>
@@ -44,7 +44,7 @@
               <div class="card-icon-bg mb-2 mx-auto">
                 <i class="bi bi-images card-info-icon"></i>
               </div>
-              <h5 class="card-info-title">Photos totales</h5>
+              <h5 class="card-info-title" data-translate="total_photos">Photos totales</h5>
               <h3 class="card-count fs-28">{{ total_photos }}</h3>
               <p class="mb-0">
                 <span class="text-success me-2"><i class="bi-arrow-up"></i> -</span>
@@ -61,7 +61,7 @@
               <div class="card-icon-bg mb-2 mx-auto">
                 <i class="bi bi-house card-info-icon"></i>
               </div>
-              <h5 class="card-info-title">Hébergements</h5>
+              <h5 class="card-info-title" data-translate="accommodations">Hébergements</h5>
               <h3 class="card-count fs-28">{{ total_housings }}</h3>
               <p class="mb-0">
                 <span class="text-success me-2"><i class="bi-arrow-up"></i> -</span>
@@ -76,7 +76,7 @@
               <div class="card-icon-bg mb-2 mx-auto">
                 <i class="bi bi-cup-straw card-info-icon"></i>
               </div>
-              <h5 class="card-info-title">Restaurants</h5>
+              <h5 class="card-info-title" data-translate="restaurants">Restaurants</h5>
               <h3 class="card-count fs-28">{{ total_restaurants }}</h3>
               <p class="mb-0">
                 <span class="text-success me-2"><i class="bi-arrow-up"></i> -</span>
@@ -115,46 +115,46 @@
       </div>
     </div>
   </div>
-  <!-- Bloc Performance & Evolution côte à côte -->
-  <div class="row mb-4 justify-content-center align-items-stretch">
-    <div class="col-12 col-md-6 d-flex">
+  <!-- Bloc Évolution pleine largeur -->
+  <div class="row mb-5 mt-4">
+    <div class="col-12">
       <!-- Carte Évolution -->
-      <div class="card widget-flat glass-card flex-fill h-100">
+      <div class="card widget-flat glass-card w-100">
         <div class="card-header bg-white fw-bold">
-          <i class="bi bi-graph-up"></i> Évolution des photos manquantes
+          <i class="bi bi-graph-up"></i> <span data-translate="evolution_missing_photos">Évolution des photos manquantes</span>
         </div>
-        <div class="card-body">
+        <div class="card-body py-4">
           <canvas id="evolutionChart" height="100"></canvas>
         </div>
       </div>
     </div>
   </div>
   <!-- Deux blocs côte à côte : Répartition et Historique -->
-  <div class="row justify-content-center mb-4">
-    <div class="col-lg-5 col-xl-5 mb-4">
-      <div class="card shadow h-100">
+  <div class="row mb-4">
+    <div class="col-lg-6 col-xl-6 mb-4">
+      <div class="card widget-flat glass-card h-100">
         <div class="card-header bg-white fw-bold">
-          <i class="bi bi-pie-chart"></i> Répartition par catégorie
+          <i class="bi bi-pie-chart"></i> <span data-translate="category_distribution">Répartition par catégorie</span>
         </div>
         <div class="card-body">
           <canvas id="pieChart" height="200"></canvas>
         </div>
       </div>
     </div>
-    <div class="col-lg-5 col-xl-5 mb-4">
+    <div class="col-lg-6 col-xl-6 mb-4">
       <div class="card widget-flat glass-card h-100 table-card">
         <div class="card-header bg-white fw-bold">
-          <i class="bi bi-clock-history"></i> Historique des snapshots
+          <i class="bi bi-clock-history"></i> <span data-translate="snapshots_history">Historique des snapshots</span>
         </div>
-        <div class="card-body p-0 table-responsive">
+        <div class="card-body p-0 table-responsive" style="max-height: 300px; overflow-y: auto;">
           <table class="table table-hover mb-0">
-            <thead class="table-light">
+            <thead class="table-light sticky-top">
               <tr>
-                <th>Date</th>
-                <th>Photos manquantes</th>
-                <th>Restaurants manquants</th>
-                <th>Hébergements</th>
-                <th>Restaurants</th>
+                <th data-translate="date">Date</th>
+                <th data-translate="missing_photos">Photos manquantes</th>
+                <th data-translate="restaurants">Restaurants manquants</th>
+                <th data-translate="accommodations">Hébergements</th>
+                <th data-translate="restaurants">Restaurants</th>
               </tr>
             </thead>
             <tbody>

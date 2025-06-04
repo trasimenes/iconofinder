@@ -380,7 +380,7 @@ ul li {
 
 /* Pour les cartes de stats */
 .row.g-3.mb-4 > [class^='col-'] {
-    min-width: 260px;
+    min-width: auto;
 }
 
 /* Pour les titres de section */
@@ -457,7 +457,6 @@ ul li {
   justify-content: flex-start;
   height: 100%;
   min-height: 170px;
-  max-width: 260px;
 }
 
 /* Pour les icônes dans les cards */

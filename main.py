@@ -334,6 +334,19 @@ def stats_view():
         return render_template('stats.html', stats=None, translate=get_translation)
     data = snapshots[-1]['data']
     stats_data = compute_stats(data)
+    
+    # DEBUG: Affichons ce que contiennent les variables
+    print("=== DEBUG STATS ===")
+    print(f"stats_data keys: {stats_data.keys()}")
+    print(f"total_activities: {stats_data.get('total_activities')}")
+    print(f"total_housings: {stats_data.get('total_housings')}")  
+    print(f"total_restaurants: {stats_data.get('total_restaurants')}")
+    print(f"top_activities: {stats_data.get('top_activities')}")
+    print(f"top_housings: {stats_data.get('top_housings')}")
+    print(f"top_restaurants: {stats_data.get('top_restaurants')}")
+    print(f"top_missing_items: {stats_data.get('top_missing_items')}")
+    print("==================")
+    
     refreshed_at = request.args.get('refreshed')
     return render_template('stats.html', stats=stats_data, translate=get_translation, refreshed_at=refreshed_at)
 
@@ -508,59 +521,75 @@ def dashboard():
             evolution_data=[],
             pie_labels=[],
             pie_data=[],
-            snapshots=[]
+            snapshots=[],
+            last_snapshot_date='Aucun snapshot',
+            translations=load_translations()
         )
 
-    # Préparation des listes pour l'évolution
+    # Calcul des statistiques pour tous les snapshots
     dates = []
-    missing_photos = []
-    missing_restaurants = []
-    total_housings = []
-    total_restaurants = []
+    missing_activities_data = []
+    missing_housings_data = []
+    missing_restaurants_data = []
     snap_table = []
 
     for snap in snapshots:
         date = snap.get('created_at', '?')
         data = snap['data']
+        
+        # Calculer les stats pour ce snapshot
+        stats = compute_stats(data)
+        
         dates.append(date)
-        missing_photos.append(data.get('missing_photos', 0))
-        missing_restaurants.append(data.get('missing_restaurants', 0))
-        total_housings.append(data.get('total_housings', 0))
-        total_restaurants.append(data.get('total_restaurants', 0))
+        missing_activities_data.append(stats['total_activities'])
+        missing_housings_data.append(stats['total_housings'])
+        missing_restaurants_data.append(stats['total_restaurants'])
+        
         snap_table.append({
             "created_at": date,
-            "missing_photos": data.get('missing_photos', 0),
-            "missing_restaurants": data.get('missing_restaurants', 0),
-            "total_housings": data.get('total_housings', 0),
-            "total_restaurants": data.get('total_restaurants', 0)
+            "missing_activities": stats['total_activities'],
+            "missing_housings": stats['total_housings'],
+            "missing_restaurants": stats['total_restaurants'],
+            "total_missing": stats['total_activities'] + stats['total_housings'] + stats['total_restaurants']
         })
 
+    # Données du dernier snapshot
     last_data = snapshots[-1]['data']
+    last_stats = compute_stats(last_data)
+    
+    total_missing = last_stats['total_activities'] + last_stats['total_housings'] + last_stats['total_restaurants']
 
-    # Pour Chart.js, on veut juste la série des photos manquantes
+    # Pour Chart.js - évolution des photos manquantes
     evolution_labels = dates
-    evolution_data = missing_photos
+    evolution_data = [a + h + r for a, h, r in zip(missing_activities_data, missing_housings_data, missing_restaurants_data)]
 
-    # Pie chart : répartition par pays (ou catégorie)
-    missing_photos_by_country = last_data.get('missing_photos_by_country', {})
-    pie_labels = list(missing_photos_by_country.keys())
-    pie_data = list(missing_photos_by_country.values())
+    # Pie chart : répartition par catégorie
+    pie_labels = ['Activités', 'Hébergements', 'Restaurants']
+    pie_data = [last_stats['total_activities'], last_stats['total_housings'], last_stats['total_restaurants']]
 
-    # --- Ajout pour la carte Performance ---
-    # On prend les 12 derniers snapshots (ou moins si pas assez)
+    # Performance chart - 12 derniers snapshots
     perf_snaps = snapshots[-12:]
     months = [snap.get('created_at', '?') for snap in perf_snaps]
-    actual = [snap['data'].get('missing_photos', 0) for snap in perf_snaps]
-    # Pour projection, on simule une projection simple (ex: +10% sur chaque valeur réelle)
-    projection = [int(val * 1.1) for val in actual]
-    # ---
+    actual = []
+    for snap in perf_snaps:
+        stats = compute_stats(snap['data'])
+        actual.append(stats['total_activities'] + stats['total_housings'] + stats['total_restaurants'])
+    
+    # Projection simple : tendance basée sur la moyenne des 3 derniers
+    if len(actual) >= 3:
+        recent_avg = sum(actual[-3:]) / 3
+        trend = (actual[-1] - actual[0]) / len(actual) if len(actual) > 1 else 0
+        projection = [int(recent_avg + trend * i) for i in range(len(actual))]
+    else:
+        projection = actual.copy()
 
     return render_template(
         'dashboard.html',
-        missing_photos=last_data.get('missing_photos', 0),
-        total_photos=last_data.get('total_photos', 0),
-        total_housings=last_data.get('total_housings', 0),
-        total_restaurants=last_data.get('total_restaurants', 0),
+        missing_photos=total_missing,
+        total_photos=0,  # À calculer si on a les données totales
+        total_housings=last_stats['total_housings'],
+        total_restaurants=last_stats['total_restaurants'],
+        total_activities=last_stats['total_activities'],
         evolution_labels=evolution_labels,
         evolution_data=evolution_data,
         pie_labels=pie_labels,
@@ -568,7 +597,9 @@ def dashboard():
         snapshots=snap_table,
         months=months,
         actual=actual,
-        projection=projection
+        projection=projection,
+        last_snapshot_date=snapshots[-1].get('created_at', 'Non disponible'),
+        translations=load_translations()
     )
 
 if __name__ == "__main__":
