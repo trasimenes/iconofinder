@@ -81,6 +81,34 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <h2 class="mt-4">{{ translate('top_missing_activities') }}</h2>
+            <ul>
+                {% for name, count in stats.top_activities %}
+                <li>{{ name }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+
+            <h2 class="mt-4">{{ translate('top_missing_housings') }}</h2>
+            <ul>
+                {% for name, count in stats.top_housings %}
+                <li>{{ name }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+
+            <h2 class="mt-4">{{ translate('top_missing_restaurants') }}</h2>
+            <ul>
+                {% for name, count in stats.top_restaurants %}
+                <li>{{ name }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+
+            <h2 class="mt-4">{{ translate('top_missing_items') }}</h2>
+            <ul>
+                {% for name, count in stats.top_missing_items %}
+                <li>{{ name }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+
             <h2 class="mt-4">{{ translate('housing_types_most_missing') }}</h2>
             <ul>
                 {% for typ, count in stats.missing_by_type.items() %}

@@ -9,8 +9,8 @@ def test_compute_stats_basic():
             'FR': {
                 'Park': {
                     'activities': [
-                        {'has_photos': False, 'image_src': ''},
-                        {'has_photos': True, 'image_src': 'ok.jpg'}
+                        {'name': 'Act1', 'has_photos': False, 'image_src': ''},
+                        {'name': 'Act1', 'has_photos': True, 'image_src': 'ok.jpg'}
                     ]
                 }
             }
@@ -19,8 +19,8 @@ def test_compute_stats_basic():
             'FR': {
                 'Park': {
                     'housings': [
-                        {'has_photos': False, 'image_src': 'default/500x375.jpg', 'type': 'VIP'},
-                        {'has_photos': True, 'image_src': 'ok.jpg', 'type': 'VIP'}
+                        {'name': 'Hou1', 'has_photos': False, 'image_src': 'default/500x375.jpg', 'type': 'VIP'},
+                        {'name': 'Hou1', 'has_photos': True, 'image_src': 'ok.jpg', 'type': 'VIP'}
                     ]
                 }
             }
@@ -29,8 +29,8 @@ def test_compute_stats_basic():
             'FR': {
                 'Park': {
                     'restaurants': [
-                        {'has_photos': False, 'images': []},
-                        {'has_photos': True, 'images': ['ok.jpg']}
+                        {'name': 'Res1', 'has_photos': False, 'images': []},
+                        {'name': 'Res1', 'has_photos': True, 'images': ['ok.jpg']}
                     ]
                 }
             }
@@ -44,4 +44,46 @@ def test_compute_stats_basic():
     assert stats['total_activities'] == 1
     assert stats['total_housings'] == 1
     assert stats['total_restaurants'] == 1
+    assert dict(stats['top_activities'])['Act1'] == 1
+    assert dict(stats['top_housings'])['Hou1'] == 1
+    assert dict(stats['top_restaurants'])['Res1'] == 1
+
+def test_compute_stats_top_counts():
+    data = {
+        'activities': {
+            'FR': {
+                'Park': {
+                    'activities': [
+                        {'name': 'A1', 'has_photos': False, 'image_src': ''},
+                        {'name': 'A1', 'has_photos': False, 'image_src': ''},
+                        {'name': 'A2', 'has_photos': False, 'image_src': ''}
+                    ]
+                }
+            }
+        },
+        'housings': {
+            'FR': {
+                'Park': {
+                    'housings': [
+                        {'name': 'H1', 'has_photos': False, 'image_src': 'default/500x375.jpg', 'type': 'VIP'},
+                        {'name': 'H1', 'has_photos': False, 'image_src': 'default/500x375.jpg', 'type': 'VIP'}
+                    ]
+                }
+            }
+        },
+        'restaurants': {
+            'FR': {
+                'Park': {
+                    'restaurants': [
+                        {'name': 'R1', 'has_photos': False, 'images': []},
+                        {'name': 'R1', 'has_photos': False, 'images': []}
+                    ]
+                }
+            }
+        }
+    }
+    stats = compute_stats(data)
+    assert dict(stats['top_activities'])['A1'] == 2
+    assert dict(stats['top_housings'])['H1'] == 2
+    assert dict(stats['top_restaurants'])['R1'] == 2
 

@@ -83,6 +83,10 @@
       "stats": "Statistics",
       "stats_title": "Missing photos statistics",
       "housing_types_most_missing": "Housing types with most missing photos",
+      "top_missing_activities": "Top missing activities",
+      "top_missing_housings": "Top missing accommodations",
+      "top_missing_restaurants": "Top missing restaurants",
+      "top_missing_items": "Top missing items",
       "no_snapshot_available": "No snapshot available",
       "country": "Country"
     },
@@ -170,6 +174,10 @@
       "stats": "Statistiques",
       "stats_title": "Statistiques des photos manquantes",
       "housing_types_most_missing": "Typologies d'hébergements les plus concernées",
+      "top_missing_activities": "Activités les plus manquantes",
+      "top_missing_housings": "Hébergements les plus manquants",
+      "top_missing_restaurants": "Restaurants les plus manquants",
+      "top_missing_items": "Eléments avec le plus de photos manquantes",
       "no_snapshot_available": "Aucun snapshot disponible",
       "country": "Pays"
     }
