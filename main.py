@@ -9,6 +9,7 @@ from services.activities import ActivityService
 from services.housing import HousingService
 from services.restaurants import RestaurantService
 from utils.translations import load_translations, get_translation, translations
+from utils.stats import compute_stats
 
 app = Flask(__name__)
 app.secret_key = "/Xfn,MN~s}.;q1M1'Om`YD;x_-<ACZ"
@@ -32,6 +33,7 @@ def load_snapshots():
 def save_snapshots(snapshots):
     with open(SNAPSHOT_FILE, 'w', encoding='utf-8') as f:
         json.dump(snapshots, f, ensure_ascii=False, indent=2)
+
 
 def search_activities(country, parc, logs=None):
     if logs is None:
@@ -264,6 +266,15 @@ def get_current_language():
 @app.context_processor
 def utility_processor():
     return dict(translate=get_translation)
+
+@app.route('/stats')
+def stats_view():
+    snapshots = load_snapshots()
+    if not snapshots:
+        return render_template('stats.html', stats=None, translate=get_translation)
+    data = snapshots[-1]['data']
+    stats_data = compute_stats(data)
+    return render_template('stats.html', stats=stats_data, translate=get_translation)
 
 @app.route('/snapshots', methods=['GET'])
 def snapshot_manager():

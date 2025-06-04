@@ -17,6 +17,9 @@
             <a href="/snapshots" class="btn btn-primary ms-3">
                 <i class="bi bi-archive"></i> Snapshots
             </a>
+            <a href="/stats" class="btn btn-success ms-3">
+                <i class="bi bi-bar-chart"></i> {{ translate('stats') }}
+            </a>
             <div class="switch" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
                 <div class="switch-labels">
                     <span class="fr">FR</span>
