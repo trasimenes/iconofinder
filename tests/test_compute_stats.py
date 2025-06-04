@@ -41,4 +41,7 @@ def test_compute_stats_basic():
     assert stats['housings']['FR'] == 1
     assert stats['restaurants']['FR'] == 1
     assert stats['missing_by_type']['VIP'] == 1
+    assert stats['total_activities'] == 1
+    assert stats['total_housings'] == 1
+    assert stats['total_restaurants'] == 1
 

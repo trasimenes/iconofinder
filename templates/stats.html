@@ -34,6 +34,32 @@
         {% if not stats %}
             <p>{{ translate('no_snapshot_available') }}</p>
         {% else %}
+            <div class="row text-center mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ translate('activities') }}</h5>
+                            <p class="display-6 mb-0">{{ stats.total_activities }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ translate('accommodations') }}</h5>
+                            <p class="display-6 mb-0">{{ stats.total_housings }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ translate('restaurants') }}</h5>
+                            <p class="display-6 mb-0">{{ stats.total_restaurants }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <table class="table table-bordered">
                 <thead>
                     <tr>
