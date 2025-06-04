@@ -3,6 +3,7 @@ import json
 import threading
 import time
 import datetime
+import logging
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from config.urls import PARKS_URLS
 from services.activities import ActivityService
@@ -11,8 +12,28 @@ from services.restaurants import RestaurantService
 from utils.translations import load_translations, get_translation, translations
 from utils.stats import compute_stats
 
+# Configuration du logging pour filtrer les erreurs TLS/SSL
+class TLSErrorFilter(logging.Filter):
+    def filter(self, record):
+        # Filtrer les erreurs 400 liées aux tentatives HTTPS
+        if "Bad request syntax" in record.getMessage() and "\\x16\\x03\\x01" in record.getMessage():
+            return False
+        return True
+
+# Appliquer le filtre au logger de werkzeug (utilisé par Flask)
+werkzeug_logger = logging.getLogger('werkzeug')
+werkzeug_logger.addFilter(TLSErrorFilter())
+
 app = Flask(__name__)
 app.secret_key = "/Xfn,MN~s}.;q1M1'Om`YD;x_-<ACZ"
+
+# Gestionnaire d'erreur pour les tentatives HTTPS sur HTTP
+@app.errorhandler(400)
+def handle_bad_request(e):
+    # Si la requête contient des octets TLS/SSL, on retourne une réponse propre
+    if request.environ.get('wsgi.input'):
+        return "Cette application utilise HTTP. Veuillez utiliser http:// au lieu de https://", 400
+    return "Requête malformée", 400
 
 print("=== FLASK SERVEUR EN TRAIN DE DÉMARRER ===")
 
@@ -235,6 +256,7 @@ def results_from_snapshot():
         return render_template('results.html', error="Aucun snapshot disponible", translate=get_translation)
     last = snapshots[-1]
     data = last['data']
+    snapshot_date = last.get('created_at', '?')
     filtered = {}
     countries = []
     if country == "Tous":
@@ -254,7 +276,45 @@ def results_from_snapshot():
                 filtered[c][p] = data['housings'][c].get(p, {})
             elif search_type == "Restaurants":
                 filtered[c][p] = data['restaurants'][c].get(p, {})
-    return render_template('results.html', countries=countries, type=search_type, parc=parc, results=filtered, translate=get_translation)
+    return render_template('results.html', countries=countries, type=search_type, parc=parc, results=filtered, translate=get_translation, snapshot_date=snapshot_date)
+
+@app.route('/api/snapshot_results')
+def api_snapshot_results():
+    country = request.args.get('country')
+    parc = request.args.get('parc')
+    search_type = request.args.get('type')
+    snapshots = load_snapshots()
+    if not snapshots:
+        return jsonify({'error': 'Aucun snapshot disponible'}), 404
+    last = snapshots[-1]
+    data = last['data']
+    filtered = {}
+    # Liste complète des pays attendus (pour l'affichage "Tous")
+    all_countries = ['France', 'Belgique', 'Allemagne', 'Pays-Bas', 'Danemark']
+    if country == "Tous":
+        countries = all_countries
+    else:
+        countries = [country]
+    for c in countries:
+        print(f"[SNAPSHOT_RESULTS] Pays demandé : {c}")
+        filtered[c] = {}
+        # Liste des parcs attendus pour ce pays
+        parks_expected = list(PARKS_URLS.get(c, {}).keys())
+        if parc == "Tous":
+            parcs = parks_expected
+        else:
+            parcs = [parc]
+        for p in parcs:
+            if search_type == "Activités":
+                filtered[c][p] = data['activities'].get(c, {}).get(p, {})
+            elif search_type == "Hébergements":
+                filtered[c][p] = data['housings'].get(c, {}).get(p, {})
+            elif search_type == "Restaurants":
+                filtered[c][p] = data['restaurants'].get(c, {}).get(p, {})
+            # Si aucune donnée, garantir un objet vide
+            if not filtered[c][p]:
+                filtered[c][p] = {}
+    return jsonify({'results': filtered})
 
 def get_current_language():
     """
@@ -411,6 +471,83 @@ def run_snapshot_creation():
     time.sleep(3)
     if os.path.exists(PROGRESS_FILE):
         os.remove(PROGRESS_FILE)
+
+@app.route('/dashboard')
+def dashboard():
+    snapshots = load_snapshots()
+    if not snapshots:
+        return render_template(
+            'dashboard.html',
+            missing_photos=0,
+            total_photos=0,
+            total_housings=0,
+            total_restaurants=0,
+            evolution_labels=[],
+            evolution_data=[],
+            pie_labels=[],
+            pie_data=[],
+            snapshots=[]
+        )
+
+    # Préparation des listes pour l'évolution
+    dates = []
+    missing_photos = []
+    missing_restaurants = []
+    total_housings = []
+    total_restaurants = []
+    snap_table = []
+
+    for snap in snapshots:
+        date = snap.get('created_at', '?')
+        data = snap['data']
+        dates.append(date)
+        missing_photos.append(data.get('missing_photos', 0))
+        missing_restaurants.append(data.get('missing_restaurants', 0))
+        total_housings.append(data.get('total_housings', 0))
+        total_restaurants.append(data.get('total_restaurants', 0))
+        snap_table.append({
+            "created_at": date,
+            "missing_photos": data.get('missing_photos', 0),
+            "missing_restaurants": data.get('missing_restaurants', 0),
+            "total_housings": data.get('total_housings', 0),
+            "total_restaurants": data.get('total_restaurants', 0)
+        })
+
+    last_data = snapshots[-1]['data']
+
+    # Pour Chart.js, on veut juste la série des photos manquantes
+    evolution_labels = dates
+    evolution_data = missing_photos
+
+    # Pie chart : répartition par pays (ou catégorie)
+    missing_photos_by_country = last_data.get('missing_photos_by_country', {})
+    pie_labels = list(missing_photos_by_country.keys())
+    pie_data = list(missing_photos_by_country.values())
+
+    # --- Ajout pour la carte Performance ---
+    # On prend les 12 derniers snapshots (ou moins si pas assez)
+    perf_snaps = snapshots[-12:]
+    months = [snap.get('created_at', '?') for snap in perf_snaps]
+    actual = [snap['data'].get('missing_photos', 0) for snap in perf_snaps]
+    # Pour projection, on simule une projection simple (ex: +10% sur chaque valeur réelle)
+    projection = [int(val * 1.1) for val in actual]
+    # ---
+
+    return render_template(
+        'dashboard.html',
+        missing_photos=last_data.get('missing_photos', 0),
+        total_photos=last_data.get('total_photos', 0),
+        total_housings=last_data.get('total_housings', 0),
+        total_restaurants=last_data.get('total_restaurants', 0),
+        evolution_labels=evolution_labels,
+        evolution_data=evolution_data,
+        pie_labels=pie_labels,
+        pie_data=pie_data,
+        snapshots=snap_table,
+        months=months,
+        actual=actual,
+        projection=projection
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

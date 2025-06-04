@@ -12,12 +12,25 @@
 }
 
 /* Global Style */
-body {
-  background-color: #f8f9fa;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  min-height: 100vh;
+body, .main-wrapper {
+  background-attachment: fixed;
+  background-image: url('https://kingstudio.ro/demos/gd/assets/images/blur-light.jpg');
+  background-position-x: 50%;
+  background-position-y: 50%;
+  background-size: cover;
+  box-sizing: border-box;
+  color: rgb(86, 89, 98);
+  display: block;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.24px;
+  line-height: 24px;
+  text-align: start;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  text-size-adjust: 100%;
+  unicode-bidi: isolate;
 }
 
 /* Navbar simple et efficace */
@@ -72,6 +85,9 @@ body {
   padding: 20px;
   max-width: 1140px;
   margin: 0 auto;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: 1200px;
 }
 
 /* Content styles */
@@ -81,8 +97,8 @@ h1, h2, h3 {
 }
 
 .card {
-  width: 50%;
-  margin: 0 auto 20px;
+  width: 100%;
+  margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -307,4 +323,205 @@ ul li {
     color: #fff;
     background-color: #0f5132;
     border-color: #0f5132;
+}
+
+/* --- Dashboard Modern Styles --- */
+.card.widget-flat {
+    border: none;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px 0 rgba(44, 101, 144, 0.07);
+    background: #fff;
+    transition: box-shadow 0.2s;
+}
+.card.widget-flat:hover {
+    box-shadow: 0 4px 24px 0 rgba(44, 101, 144, 0.13);
+}
+.card-icon-bg {
+    background: #f1f5fa;
+    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+.card-info-icon {
+    font-size: 1.7rem;
+    color: #0d52ee;
+}
+.card-info-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #6c757d;
+    letter-spacing: 1px;
+    margin-bottom: 0.2rem;
+}
+.card-count {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #222;
+    margin-bottom: 0.2rem;
+}
+.fs-28 { font-size: 2rem; }
+
+/* Pour les boutons du header dashboard */
+.page-title-area .btn {
+    border-radius: 10px;
+    box-shadow: 0 2px 8px 0 rgba(44, 101, 144, 0.07);
+    font-weight: 600;
+}
+
+/* Pour le header du dashboard */
+.page-title-area {
+    margin-bottom: 2rem;
+}
+
+/* Pour les cartes de stats */
+.row.g-3.mb-4 > [class^='col-'] {
+    min-width: 260px;
+}
+
+/* Pour les titres de section */
+.card-header-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 0.5px;
+}
+
+/* --- Glassmorphism Dashboard Cards --- */
+.card.widget-flat.glass-card {
+  backdrop-filter: blur(10px);
+  background-attachment: scroll;
+  background-clip: border-box;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.7) -7.5%, rgba(255, 255, 255, 0.45) 120%);
+  background-origin: padding-box;
+  background-position-x: 0%;
+  background-position-y: 0%;
+  background-repeat: repeat;
+  background-size: auto;
+  border-bottom-color: #fff;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  border-image: none;
+  border-left-color: #fff;
+  border-left-style: solid;
+  border-left-width: 1px;
+  border-right-color: #fff;
+  border-right-style: solid;
+  border-right-width: 1px;
+  border-top-color: #fff;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  box-shadow: 0 3px 12px 0 rgba(0,0,0,0.05);
+  box-sizing: border-box;
+  color: #565962;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  height: 172px;
+  letter-spacing: 0.24px;
+  line-height: 24px;
+  margin-bottom: 24px;
+  min-width: 0;
+  overflow-wrap: break-word;
+  position: relative;
+  text-align: start;
+  text-size-adjust: 100%;
+  unicode-bidi: isolate;
+  width: 100%;
+  max-width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+.card.widget-flat.glass-card .card-header {
+  background: transparent !important;
+  border-bottom: none;
+}
+
+/* Pour les cards du dashboard */
+.card.widget-flat.glass-card {
+  border-radius: 18px;
+  padding: 1.5rem 1.2rem;
+  align-items: flex-start;
+  justify-content: flex-start;
+  height: 100%;
+  min-height: 170px;
+  max-width: 260px;
+}
+
+/* Pour les icônes dans les cards */
+.card-icon-bg {
+  background: #e9f0fb;
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.card-info-icon {
+  font-size: 1.7rem;
+  color: #3a7afe;
+}
+
+/* Pour les titres et chiffres */
+.card-info-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #565962;
+  letter-spacing: 1px;
+  margin-bottom: 0.2rem;
+}
+.card-count {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #222;
+  margin-bottom: 0.2rem;
+}
+
+/* Pour les cartes contenant un tableau, largeur adaptée et overflow */
+.card.widget-flat.glass-card.table-card {
+  width: 100%;
+  min-width: 350px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.card .card-body {
+  overflow-x: auto;
+}
+
+.card .card-body canvas {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+}
+
+.chart-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }

@@ -9,26 +9,7 @@
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Nyan Cat" class="nyan-cat">
-            </a>
-            <a href="/snapshots" class="btn btn-primary ms-3">
-                <i class="bi bi-archive"></i> Snapshots
-            </a>
-            <a href="/stats" class="btn btn-success ms-3">
-                <i class="bi bi-bar-chart"></i> {{ translate('stats') }}
-            </a>
-            <div class="switch" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
-                <div class="switch-labels">
-                    <span class="fr">FR</span>
-                    <span class="en">EN</span>
-                </div>
-                <div class="switch-handle"></div>
-            </div>
-        </div>
-    </nav>
+{% include '_navbar.html' %}
 
     <div class="container py-4">
         <h1 data-translate="welcome_title">{{ translate('welcome_title') }}</h1>

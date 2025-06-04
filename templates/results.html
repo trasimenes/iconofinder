@@ -9,23 +9,14 @@
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Nyan Cat" class="nyan-cat">
-            </a>
-            <div class="d-flex align-items-center">
-                <a href="/" class="new-search-btn me-3">{{ translate('new_search') }}</a>
-                <div class="switch" data-language="{{ session.get('language', 'fr') }}" onclick="toggleLanguage(this)">
-                    <div class="switch-handle">
-                        <span class="current-lang">{{ session.get('language', 'fr').upper() }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+{% include '_navbar.html' %}
 
     <div class="container py-4">
+        {% if snapshot_date %}
+            <div class="alert alert-info text-center mb-4">
+                Données issues du dernier snapshot le {{ snapshot_date }}
+            </div>
+        {% endif %}
         {% if error %}
             <div class="alert alert-danger" data-translate="error">
                 {{ translate(error) }}
@@ -101,7 +92,14 @@
         let lang = document.documentElement.lang || 'fr';
 
         try {
-            const response = await fetch(`/api/search?country=${country}&parc=${parc}&type=${searchType}`);
+            // Détecter si on est sur /results_from_snapshot
+            let apiUrl;
+            if (window.location.pathname.startsWith('/results_from_snapshot')) {
+                apiUrl = `/api/snapshot_results?country=${country}&parc=${parc}&type=${searchType}`;
+            } else {
+                apiUrl = `/api/search?country=${country}&parc=${parc}&type=${searchType}`;
+            }
+            const response = await fetch(apiUrl);
             const data = await response.json();
 
             if (data.error) {
