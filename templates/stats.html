@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ session.get('language', 'fr') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Snapshots</title>
+    <title>{{ translate('stats_title') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
@@ -30,37 +30,39 @@
         </div>
     </nav>
     <div class="container py-4">
-        <h1>Gestion des Snapshots</h1>
-        <p>Liste des snapshots enregistrés :</p>
-        <ul class="list-group mb-4">
-            {% for snap in snapshots %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
-                    {{ snap.name }}<br>
-                    <small class="text-muted">Créé le : {{ snap.created_at }}</small>
-                </span>
-                <span>
-                    <a href="/snapshots/view/{{ snap.id }}" class="btn btn-sm btn-info">Voir</a>
-                    <a href="/snapshots/delete/{{ snap.id }}" class="btn btn-sm btn-danger">Supprimer</a>
-                </span>
-            </li>
-            {% else %}
-            <li class="list-group-item">Aucun snapshot enregistré.</li>
-            {% endfor %}
-        </ul>
-        <a href="/snapshots/create_async" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Nouveau snapshot
-        </a>
+        <h1>{{ translate('stats_title') }}</h1>
+        {% if not stats %}
+            <p>{{ translate('no_snapshot_available') }}</p>
+        {% else %}
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Pays</th>
+                        <th>{{ translate('activities') }}</th>
+                        <th>{{ translate('accommodations') }}</th>
+                        <th>{{ translate('restaurants') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set countries = (stats.activities.keys() | list + stats.housings.keys() | list + stats.restaurants.keys() | list) | unique %}
+                    {% for country in countries %}
+                    <tr>
+                        <td>{{ country }}</td>
+                        <td>{{ stats.activities.get(country, 0) }}</td>
+                        <td>{{ stats.housings.get(country, 0) }}</td>
+                        <td>{{ stats.restaurants.get(country, 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <h2 class="mt-4">{{ translate('housing_types_most_missing') }}</h2>
+            <ul>
+                {% for typ, count in stats.missing_by_type.items() %}
+                <li>{{ typ }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
     </div>
-    {% if request.args.get('status') == 'success' %}
-    <div id="notif-bar" class="alert alert-success text-center position-fixed w-100" style="top:0;left:0;z-index:9999;">
-        <i class="bi bi-check-circle"></i> Snapshot réussi !
-    </div>
-    {% elif request.args.get('status') == 'error' %}
-    <div id="notif-bar" class="alert alert-danger text-center position-fixed w-100" style="top:0;left:0;z-index:9999;">
-        <i class="bi bi-x-circle"></i> Snapshot raté !
-    </div>
-    {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function toggleLanguage(switchElement) {
@@ -68,14 +70,6 @@
         const newLang = currentLang === 'fr' ? 'en' : 'fr';
         window.location.href = `/set_language/${newLang}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
-    setTimeout(function() {
-        var bar = document.getElementById('notif-bar');
-        if (bar) {
-            bar.style.transition = "opacity 1s";
-            bar.style.opacity = 0;
-            setTimeout(function() { bar.remove(); }, 1000);
-        }
-    }, 10000);
     </script>
 </body>
-</html> 
+</html>
