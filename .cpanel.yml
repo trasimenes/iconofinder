@@ -1,0 +1,13 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/goba5877/iconofinder/
+
+    # On vide l’ancien contenu
+    - /bin/rm -rf $DEPLOYPATH*
+
+    # On recopie tout (sauf .git par défaut)
+    - /bin/cp -R . $DEPLOYPATH
+
+    # On ajuste les permissions
+    - /bin/chmod -R u+rwX $DEPLOYPATH
