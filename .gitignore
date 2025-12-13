@@ -3,7 +3,6 @@ __pycache__/
 .DS_Store
 sneatpro/
 templates/sneat-pro/
-static/sneat/
 
 # Fichiers de configuration sensibles (URLs des sites)
 config/urls.py
