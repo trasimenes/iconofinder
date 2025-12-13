@@ -155,6 +155,10 @@ def before_request():
     if 'language' not in session:
         session['language'] = 'fr'
 
+@app.route('/robots.txt')
+def robots():
+    return app.send_static_file('robots.txt')
+
 @app.route('/')
 def home():
     countries = ['Tous'] + sorted(list(PARKS_URLS.keys()))  # Ajoute "Tous" et trie les pays
