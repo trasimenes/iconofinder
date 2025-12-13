@@ -1,5 +1,5 @@
 """
-Extraction factorisée des offres Center Parcs (restaurants, supermarchés, forfaits, services).
+Extraction factorisée des offres (restaurants, supermarchés, forfaits, services).
 Utilisation :
     - RestaurantService().get_all_offers(parc_url) -> liste d'offres détaillées
     - group_offers_by_typology(offers) -> dict par typologie pour l'UI/API
@@ -37,8 +37,10 @@ def _get_img_url(img):
 class RestaurantService:
     def __init__(self):
         self.session = requests.Session()
+        # Headers minimaux comme curl pour éviter les 403
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'curl/8.7.1',
+            'Accept': '*/*'
         })
 
     def get_urls(self):
@@ -222,8 +224,12 @@ class RestaurantService:
                 for img in popin.select('img, source')
                 if _get_img_url(img)
             ]
-        # Correction : considère une photo présente seulement si img_url est non vide ou au moins une popin_image non vide
-        has_photos = bool((img_url and img_url.strip()) or (popin_images and any(img.strip() for img in popin_images if img)))
+        # Correction : considère une photo présente seulement si img_url est non vide et ne contient pas /default/
+        # Note: AAA_XXXXX sont des images valides, pas des placeholders
+        def is_valid_photo(url):
+            return url and url.strip() and '/default/' not in url.lower()
+
+        has_photos = bool(is_valid_photo(img_url) or (popin_images and any(is_valid_photo(img) for img in popin_images if img)))
         # DEBUG
         print(f"DEBUG {name.get_text(strip=True) if name else ''} | img_url: {img_url} | popin_images: {popin_images} | has_photos: {has_photos}")
         return {
@@ -260,7 +266,7 @@ class RestaurantService:
 
 def group_offers_by_typology(offers):
     """
-    Regroupe une liste d'offres Center Parcs par typologie (restaurants, supermarches, forfaits, services).
+    Regroupe une liste d'offres par typologie (restaurants, supermarches, forfaits, services).
     Retourne un dict { 'restaurants': [...], 'supermarches': [...], 'forfaits': [...], 'services': [...] }
     """
     result = {

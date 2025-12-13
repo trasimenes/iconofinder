@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 
 def get_missing_housing_photos(url):
     """
-    Scrape la page des hébergements Center Parcs et identifie les logements avec ou sans photos.
+    Scrape la page des hébergements et identifie les logements avec ou sans photos.
     """
     try:
         print("\n🟢 Scrap housing lancé :", url)

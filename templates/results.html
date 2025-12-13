@@ -1,817 +1,506 @@
-<!DOCTYPE html>
-<html lang="{{ session.get('language', 'fr') }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IconoFinder - Center Parcs</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
-</head>
-<body>
-{% include '_navbar.html' %}
+{% extends "base.html" %}
 
-    <div class="container py-4">
-        {% if snapshot_date %}
-            <div class="alert alert-info text-center mb-4">
-                Données issues du dernier snapshot le {{ snapshot_date }}
-            </div>
-        {% endif %}
-        {% if error %}
-            <div class="alert alert-danger" data-translate="error">
-                {{ translate(error) }}
-            </div>
-        {% else %}
-            <!-- Navigation tabs -->
-            <ul class="nav nav-pills mb-4" role="tablist">
-                {% for country in countries %}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {% if loop.first %}active{% endif %}" 
-                            data-bs-toggle="pill" 
-                            data-bs-target="#{{ country|lower }}" 
-                            type="button" 
-                            role="tab">
-                        {{ country }}
-                    </button>
-                </li>
-                {% endfor %}
-            </ul>
+{% block title %}Résultats - IconoFinder{% endblock %}
 
-            <!-- Tab content -->
-            <div class="tab-content">
-                {% for country in countries %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
-                     id="{{ country|lower }}" 
-                     role="tabpanel"
-                     data-country="{{ country }}"
-                     data-loaded="false">
-                    
-                    <div class="country-loading">
-                        <div class="d-flex justify-content-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden" data-translate="loading">{{ translate('loading') }}</span>
-                            </div>
-                        </div>
-                        <p class="text-center mt-2" data-translate="searching_for">{{ translate('searching_for') }} {{ country }}...</p>
-                    </div>
+{% block content %}
+{% if snapshot_date %}
+<div class="alert alert-info text-center mb-4">
+    <i class="bi bi-clock-history me-2"></i>
+    Données issues du dernier snapshot le {{ snapshot_date }}
+</div>
+{% endif %}
 
-                    <div class="country-results" style="display: none;">
-                        <!-- Les résultats seront injectés ici -->
-                    </div>
+{% if error %}
+<div class="alert alert-danger" data-translate="error">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ translate(error) }}
+</div>
+{% else %}
 
-                    <div class="country-error alert alert-danger" style="display: none;">
-                        <!-- Les erreurs seront affichées ici -->
+<!-- Navigation tabs -->
+<div class="nav-align-top mb-4">
+    <ul class="nav nav-pills mb-3 flex-wrap" role="tablist">
+        {% for country in countries %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if loop.first %}active{% endif %}"
+                    data-bs-toggle="pill"
+                    data-bs-target="#{{ country|lower }}"
+                    type="button"
+                    role="tab">
+                <i class="bi bi-geo-alt me-1"></i> {{ country }}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content p-0">
+        {% for country in countries %}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+             id="{{ country|lower }}"
+             role="tabpanel"
+             data-country="{{ country }}"
+             data-loaded="false">
+
+            <div class="country-loading">
+                <div class="d-flex justify-content-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden" data-translate="loading">{{ translate('loading') }}</span>
                     </div>
                 </div>
-                {% endfor %}
+                <p class="text-center text-muted" data-translate="searching_for">{{ translate('searching_for') }} {{ country }}...</p>
             </div>
-        {% endif %}
+
+            <div class="country-results" style="display: none;">
+                <!-- Les résultats seront injectés ici -->
+            </div>
+
+            <div class="country-error alert alert-danger" style="display: none;">
+                <!-- Les erreurs seront affichées ici -->
+            </div>
+        </div>
+        {% endfor %}
     </div>
+</div>
+{% endif %}
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    // Initialiser les traductions au chargement de la page
-    document.addEventListener('DOMContentLoaded', function() {
-        const currentLang = document.documentElement.lang;
-        // Pas besoin d'appeler updateTranslations ici car on utilise déjà translate()
-    });
+{% block extra_js %}
+<script>
+// Initialiser les traductions au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const currentLang = document.documentElement.lang;
+});
 
-    function toggleLanguage(switchElement) {
-        const currentLang = switchElement.getAttribute('data-language');
-        const newLang = currentLang === 'fr' ? 'en' : 'fr';
-        
-        // Rediriger vers la nouvelle langue
-        window.location.href = `/set_language/${newLang}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-    }
+// Fonction pour charger les résultats d'un pays
+async function loadCountryResults(country, searchType, parc) {
+    const tabPane = document.querySelector(`#${country.toLowerCase()}`);
+    if (!tabPane || tabPane.getAttribute('data-loaded') === 'true') return;
 
-    // Fonction pour charger les résultats d'un pays
-    async function loadCountryResults(country, searchType, parc) {
-        const tabPane = document.querySelector(`#${country.toLowerCase()}`);
-        if (!tabPane || tabPane.getAttribute('data-loaded') === 'true') return;
+    let lang = document.documentElement.lang || 'fr';
 
-        let lang = document.documentElement.lang || 'fr';
+    try {
+        // Détecter si on est sur /results_from_snapshot
+        let apiUrl;
+        if (window.location.pathname.startsWith('/results_from_snapshot')) {
+            apiUrl = `/api/snapshot_results?country=${country}&parc=${parc}&type=${searchType}`;
+        } else {
+            apiUrl = `/api/search?country=${country}&parc=${parc}&type=${searchType}`;
+        }
+        const response = await fetch(apiUrl);
+        const data = await response.json();
 
-        try {
-            // Détecter si on est sur /results_from_snapshot
-            let apiUrl;
-            if (window.location.pathname.startsWith('/results_from_snapshot')) {
-                apiUrl = `/api/snapshot_results?country=${country}&parc=${parc}&type=${searchType}`;
-            } else {
-                apiUrl = `/api/search?country=${country}&parc=${parc}&type=${searchType}`;
-            }
-            const response = await fetch(apiUrl);
-            const data = await response.json();
+        if (data.error) {
+            throw new Error(data.error);
+        }
 
-            if (data.error) {
-                throw new Error(data.error);
-            }
+        // Cacher le loader
+        tabPane.querySelector('.country-loading').style.display = 'none';
 
-            // Cacher le loader
-            tabPane.querySelector('.country-loading').style.display = 'none';
+        // Construire le HTML des résultats
+        const resultsContainer = tabPane.querySelector('.country-results');
+        let resultsHtml = '';
 
-            // Construire le HTML des résultats
-            const resultsContainer = tabPane.querySelector('.country-results');
-            let resultsHtml = '';
+        // Variables pour vérifier si tout va bien
+        let allParksOk = true;
+        let detailedResults = '';
 
-            // Variables pour vérifier si tout va bien
-            let allParksOk = true;
-            let detailedResults = '';
+        // Patch pour n'afficher QUE les blocs pertinents selon le type de recherche
+        const isRestaurants = searchType === 'Restaurants';
+        const isHousings = searchType === 'Hébergements';
+        const isActivities = searchType === 'Activités';
 
-            // Patch pour n'afficher QUE les blocs pertinents selon le type de recherche
-            const isRestaurants = searchType === 'Restaurants';
-            const isHousings = searchType === 'Hébergements';
-            const isActivities = searchType === 'Activités';
-
-            // Calculer l'état global des photos
-            let hasMissingPhotos = false;
-            for (const countryKey of (country === "Tous" ? Object.keys(data.results) : [country])) {
-                for (const parkKey in data.results[countryKey]) {
-                    const parkData = data.results[countryKey][parkKey];
-                    if (isActivities && parkData.activities) {
-                        for (const a of parkData.activities) {
-                            if (!a.image_src || a.image_src.includes('default')) {
-                                hasMissingPhotos = true;
-                                break;
-                            }
-                        }
-                    } else if (isRestaurants && parkData.restaurants) {
-                        for (const r of parkData.restaurants) {
-                            if (!r.has_photos) {
-                                hasMissingPhotos = true;
-                                break;
-                            }
+        // Calculer l'état global des photos (utiliser has_photos du backend)
+        let hasMissingPhotos = false;
+        for (const countryKey of (country === "Tous" ? Object.keys(data.results) : [country])) {
+            for (const parkKey in data.results[countryKey]) {
+                const parkData = data.results[countryKey][parkKey];
+                if (isActivities && parkData.activities) {
+                    for (const a of parkData.activities) {
+                        if (!a.has_photos) {
+                            hasMissingPhotos = true;
+                            break;
                         }
                     }
-                    if (hasMissingPhotos) break;
+                } else if (isRestaurants && parkData.restaurants) {
+                    for (const r of parkData.restaurants) {
+                        if (!r.has_photos) {
+                            hasMissingPhotos = true;
+                            break;
+                        }
+                    }
+                } else if (isHousings && parkData.housings) {
+                    for (const h of parkData.housings) {
+                        if (!h.has_photos) {
+                            hasMissingPhotos = true;
+                            break;
+                        }
+                    }
                 }
                 if (hasMissingPhotos) break;
             }
-            // Afficher le bandeau global
-            resultsHtml += `
-                <div class="alert ${hasMissingPhotos ? 'alert-warning' : 'alert-success'} mb-4">
-                    <i class="bi bi-${hasMissingPhotos ? 'exclamation-triangle-fill' : 'check-circle-fill'}"></i>
-                    ${hasMissingPhotos ? (lang === 'en' ? 'Missing pictures' : 'Photos manquantes') : (lang === 'en' ? 'Pictures OK' : 'Photos OK')}
-                </div>
-            `;
-
-            // Fonction utilitaire pour générer des IDs sûrs
-            function safeId(str) {
-                return str.replace(/[^a-zA-Z0-9]/g, '');
-            }
-
-            // Parcourir les parcs du pays
-            if (country === "Tous") {
-                let accordionId = `accordion-${country.toLowerCase()}`;
-                resultsHtml += `<div class="accordion mb-4" id="${accordionId}">`;
-                let parcIndex = 0;
-                for (const [countryName, parks] of Object.entries(data.results)) {
-                    for (const [parkName, parkData] of Object.entries(parks)) {
-                        let safePanel = safeId(`${countryName}-${parkName}`);
-                        let panelId = `${accordionId}-panel-${safePanel}`;
-                        let headingId = `${panelId}-heading`;
-                        let collapseId = `${panelId}-collapse`;
-                        let isOpen = false;
-                        resultsHtml += `
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="${headingId}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-                                    ${countryName} - ${parkName}
-                                </button>
-                            </h2>
-                            <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#${accordionId}">
-                                <div class="accordion-body">
-                                    <div class="mb-3">
-                                    `;
-                        if (isRestaurants) {
-                            resultsHtml += `
-                                        <b>Restaurants</b>
-                                        <ul class="list-group mb-2">`;
-                            if (Array.isArray(parkData.restaurants) && parkData.restaurants.length > 0) {
-                                parkData.restaurants.forEach(r => {
-                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                        ${r.name}
-                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                        </span>
-                                    </li>`;
-                                });
-                            } else {
-                                resultsHtml += `<li class="list-group-item">Aucun restaurant</li>`;
-                            }
-                            resultsHtml += `</ul>
-                                        <b>Supermarchés & boutiques</b>
-                                        <ul class="list-group mb-2">`;
-                            if (Array.isArray(parkData.supermarches) && parkData.supermarches.length > 0) {
-                                parkData.supermarches.forEach(r => {
-                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                        ${r.name}
-                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                        </span>
-                                    </li>`;
-                                });
-                            } else {
-                                resultsHtml += `<li class="list-group-item">Aucun supermarché</li>`;
-                            }
-                            resultsHtml += `</ul>
-                                        <b>Services</b>
-                                        <ul class="list-group mb-2">`;
-                            if (Array.isArray(parkData.services) && parkData.services.length > 0) {
-                                parkData.services.forEach(r => {
-                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                        ${r.name}
-                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                        </span>
-                                    </li>`;
-                                });
-                            } else {
-                                resultsHtml += `<li class="list-group-item">Aucun service</li>`;
-                            }
-                            resultsHtml += `</ul>
-                                        <b>Forfaits</b>
-                                        <ul class="list-group mb-2">`;
-                            if (Array.isArray(parkData.forfaits) && parkData.forfaits.length > 0) {
-                                parkData.forfaits.forEach(r => {
-                                    resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                        ${r.name}
-                                        <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                            <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                        </span>
-                                    </li>`;
-                                });
-                            } else {
-                                resultsHtml += `<li class="list-group-item">Aucun forfait</li>`;
-                            }
-                            resultsHtml += `</ul>`;
-                        }
-                        if (isActivities) {
-                            const activities = Array.isArray(parkData.activities) ? parkData.activities : [];
-                            const missing = activities.filter(a => !a.image_src || a.image_src.includes('default'));
-                            const ok = activities.filter(a => a.image_src && !a.image_src.includes('default'));
-                            const allPhotosOk = activities.length > 0 && missing.length === 0;
-                            resultsHtml += `<div>`;
-                            if (activities.length === 0) {
-                                resultsHtml += `<div class='alert alert-secondary'>Aucune activité trouvée.</div>`;
-                            } else if (allPhotosOk) {
-                                // Message multilingue selon la langue courante
-                                let msg = (lang === 'en')
-                                    ? 'All activities in this park have a valid photo.'
-                                    : 'Toutes les activités de ce parc possèdent une photo valide.';
-                                resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
-                                if (ok.length > 0) {
-                                    const okCollapseId = `${panelId}-ok-activities-collapse`;
-                                    resultsHtml += `
-                                        <div class='accordion' id='${panelId}-ok-accordion'>
-                                          <div class='accordion-item'>
-                                            <h2 class='accordion-header' id='${panelId}-ok-heading'>
-                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                                ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
-                                              </button>
-                                            </h2>
-                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
-                                              <div class='accordion-body'>
-                                                <ul class='list-group'>`;
-                                    ok.forEach(a => {
-                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                            ${a.name}
-                                            <span class='badge bg-success rounded-pill'>
-                                                <i class='bi bi-check-circle'></i> photo ok
-                                            </span>
-                                        </li>`;
-                                    });
-                                    resultsHtml += `</ul></div></div></div></div>`;
-                                }
-                            } else {
-                                if (missing.length > 0) {
-                                    resultsHtml += `<div class='mb-2'><b>${lang === 'en' ? 'Activities with missing pictures' : 'Activités avec photo manquante'}</b></div><ul class='list-group mb-3'>`;
-                                    missing.forEach(a => {
-                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                            ${a.name}
-                                            <span class='badge bg-danger rounded-pill'>
-                                                <i class='bi bi-exclamation-circle'></i> photo manquante
-                                            </span>
-                                        </li>`;
-                                    });
-                                    resultsHtml += `</ul>`;
-                                }
-                                if (ok.length > 0) {
-                                    const okCollapseId = `${panelId}-ok-activities-collapse`;
-                                    resultsHtml += `
-                                        <div class='accordion' id='${panelId}-ok-accordion'>
-                                          <div class='accordion-item'>
-                                            <h2 class='accordion-header' id='${panelId}-ok-heading'>
-                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                                ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
-                                              </button>
-                                            </h2>
-                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
-                                              <div class='accordion-body'>
-                                                <ul class='list-group'>`;
-                                    ok.forEach(a => {
-                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                            ${a.name}
-                                            <span class='badge bg-success rounded-pill'>
-                                                <i class='bi bi-check-circle'></i> photo ok
-                                            </span>
-                                        </li>`;
-                                    });
-                                    resultsHtml += `</ul></div></div></div></div>`;
-                                }
-                            }
-                            resultsHtml += `</div>`;
-                        }
-                        if (isHousings) {
-                            const housings = Array.isArray(parkData.housings) ? parkData.housings : [];
-                            const missing = housings.filter(h => !h.image_src || h.image_src.includes('default'));
-                            const ok = housings.filter(h => h.image_src && !h.image_src.includes('default'));
-                            const allPhotosOk = housings.length > 0 && missing.length === 0;
-                            resultsHtml += `<div>`;
-                            if (housings.length === 0) {
-                                resultsHtml += `<div class='alert alert-secondary'>Aucun hébergement trouvé.</div>`;
-                            } else if (allPhotosOk) {
-                                // Message multilingue selon la langue courante
-                                let msg = (lang === 'en')
-                                    ? 'All accommodations in this park have a valid photo.'
-                                    : 'Tous les hébergements de ce parc possèdent une photo valide.';
-                                resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
-                                if (ok.length > 0) {
-                                    const okCollapseId = `${panelId}-ok-housings-collapse`;
-                                    resultsHtml += `
-                                        <div class='accordion' id='${panelId}-ok-housings-accordion'>
-                                          <div class='accordion-item'>
-                                            <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
-                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                                ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
-                                              </button>
-                                            </h2>
-                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
-                                              <div class='accordion-body'>
-                                                <ul class='list-group'>`;
-                                    ok.forEach(h => {
-                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                            <div>
-                                                <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
-                                                <span style='color:#888;'>${h.name}</span>
-                                            </div>
-                                            <span class='badge bg-success rounded-pill'>
-                                                <i class='bi bi-check-circle'></i> photo ok
-                                            </span>
-                                        </li>`;
-                                    });
-                                    resultsHtml += `</ul></div></div></div></div>`;
-                                }
-                            } else {
-                                if (missing.length > 0) {
-                                    resultsHtml += `<div class='mb-2'><b>Hébergements avec photo manquante</b></div><ul class='list-group mb-3'>`;
-                                    missing.forEach(h => {
-                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                            <div>
-                                                <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
-                                                <span style='color:#888;'>${h.name}</span>
-                                            </div>
-                                            <span class='badge bg-danger rounded-pill'>
-                                                <i class='bi bi-exclamation-circle'></i> photo manquante
-                                            </span>
-                                        </li>`;
-                                    });
-                                    resultsHtml += `</ul>`;
-                                }
-                                if (ok.length > 0) {
-                                    const okCollapseId = `${panelId}-ok-housings-collapse`;
-                                    resultsHtml += `
-                                        <div class='accordion' id='${panelId}-ok-housings-accordion'>
-                                          <div class='accordion-item'>
-                                            <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
-                                              <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                                ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
-                                              </button>
-                                            </h2>
-                                            <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
-                                              <div class='accordion-body'>
-                                                <ul class='list-group'>`;
-                                    ok.forEach(h => {
-                                        resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                            <div>
-                                                <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
-                                                <span style='color:#888;'>${h.name}</span>
-                                            </div>
-                                            <span class='badge bg-success rounded-pill'>
-                                                <i class='bi bi-check-circle'></i> photo ok
-                                            </span>
-                                        </li>`;
-                                    });
-                                    resultsHtml += `</ul></div></div></div></div>`;
-                                }
-                            }
-                            resultsHtml += `</div>`;
-                        }
-                        resultsHtml += `</div>`;
-                        if (!isActivities && !isHousings) {
-                            resultsHtml += `<button class="btn btn-outline-secondary mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#details-${panelId}">
-                                Afficher tous les détails
-                            </button>`;
-                        }
-                        resultsHtml += `</div>
-                                    <div class="collapse" id="details-${panelId}">
-                                        <div class="accordion" id="details-accordion-${panelId}">`;
-                        if (isRestaurants) {
-                            [
-                                {typ: 'Restaurants', arr: parkData.restaurants},
-                                {typ: 'Supermarches', arr: parkData.supermarches},
-                                {typ: 'Services', arr: parkData.services},
-                                {typ: 'Forfaits', arr: parkData.forfaits}
-                            ].forEach(({typ, arr}, idx) => {
-                                const items = Array.isArray(arr) ? arr : [];
-                                const typLabel = typ === 'Supermarches' ? 'Supermarchés & boutiques' : (typ === 'Forfaits' ? 'Forfaits' : (typ === 'Services' ? 'Services' : 'Restaurants'));
-                                const typPanelId = `details-${panelId}-${typ}`;
-                                resultsHtml += `
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header" id="${typPanelId}-heading">
-                                                    <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#${typPanelId}-collapse" aria-expanded="${idx === 0 ? 'true' : 'false'}" aria-controls="${typPanelId}-collapse">
-                                                        ${typLabel} <span class="badge bg-primary ms-2">${items.length}</span>
-                                                    </button>
-                                                </h2>
-                                                <div id="${typPanelId}-collapse" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" aria-labelledby="${typPanelId}-heading" data-bs-parent="#details-accordion-${panelId}">
-                                                    <div class="accordion-body">
-                                                        <ul class="list-group">`;
-                                if (items.length > 0) {
-                                    items.forEach(r => {
-                                        resultsHtml += `<li class="list-group-item"><b>${r.name}</b><br>`;
-                                        if (r.description) resultsHtml += `<i>${r.description}</i><br>`;
-                                        if (r.cuisine_type) resultsHtml += `<b>Type :</b> ${r.cuisine_type}<br>`;
-                                        if (r.horaires) resultsHtml += `<b>Horaires :</b> ${r.horaires}<br>`;
-                                        if (r.link) resultsHtml += `<a href="${r.link}" target="_blank">Voir le menu</a><br>`;
-                                        if (r.images && r.images.length > 0) {
-                                            resultsHtml += r.images.filter(img => !!img).map(img => `<img src="${img}" alt="photo ${r.name}" style="max-width:120px;max-height:80px;margin:2px;" />`).join('');
-                                        }
-                                        resultsHtml += `</li>`;
-                                    });
-                                } else {
-                                    resultsHtml += `<li class="list-group-item">Aucun ${typLabel.toLowerCase()}</li>`;
-                                }
-                                resultsHtml += `</ul></div></div></div>`;
-                            });
-                        }
-                        resultsHtml += `</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
-                        parcIndex++;
-                    }
-                }
-                resultsHtml += `</div>`;
-            } else {
-                let accordionId = `accordion-${country.toLowerCase()}`;
-                resultsHtml += `<div class="accordion mb-4" id="${accordionId}">`;
-                let parcIndex = 0;
-                for (const [parkName, parkData] of Object.entries(data.results[country] || {})) {
-                    let safePanel = safeId(parkName);
-                    let panelId = `${accordionId}-panel-${safePanel}`;
-                    let headingId = `${panelId}-heading`;
-                    let collapseId = `${panelId}-collapse`;
-                    let isOpen = false;
-                    resultsHtml += `
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="${headingId}">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-                                ${parkName}
-                            </button>
-                        </h2>
-                        <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#${accordionId}">
-                            <div class="accordion-body">
-                                <div class="mb-3">
-                                `;
-                    if (isRestaurants) {
-                        resultsHtml += `
-                                    <b>Restaurants</b>
-                                    <ul class="list-group mb-2">`;
-                        if (Array.isArray(parkData.restaurants) && parkData.restaurants.length > 0) {
-                            parkData.restaurants.forEach(r => {
-                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                    ${r.name}
-                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                    </span>
-                                </li>`;
-                            });
-                        } else {
-                            resultsHtml += `<li class="list-group-item">Aucun restaurant</li>`;
-                        }
-                        resultsHtml += `</ul>
-                                    <b>Supermarchés & boutiques</b>
-                                    <ul class="list-group mb-2">`;
-                        if (Array.isArray(parkData.supermarches) && parkData.supermarches.length > 0) {
-                            parkData.supermarches.forEach(r => {
-                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                    ${r.name}
-                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                    </span>
-                                </li>`;
-                            });
-                        } else {
-                            resultsHtml += `<li class="list-group-item">Aucun supermarché</li>`;
-                        }
-                        resultsHtml += `</ul>
-                                    <b>Services</b>
-                                    <ul class="list-group mb-2">`;
-                        if (Array.isArray(parkData.services) && parkData.services.length > 0) {
-                            parkData.services.forEach(r => {
-                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                    ${r.name}
-                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                    </span>
-                                </li>`;
-                            });
-                        } else {
-                            resultsHtml += `<li class="list-group-item">Aucun service</li>`;
-                        }
-                        resultsHtml += `</ul>
-                                    <b>Forfaits</b>
-                                    <ul class="list-group mb-2">`;
-                        if (Array.isArray(parkData.forfaits) && parkData.forfaits.length > 0) {
-                            parkData.forfaits.forEach(r => {
-                                resultsHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                                    ${r.name}
-                                    <span class="badge ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'bg-success' : 'bg-danger')} rounded-pill">
-                                        <i class="bi bi-${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'check-circle' : 'exclamation-circle')}"></i> ${((r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1') ? 'photo ok' : 'photo manquante')}
-                                    </span>
-                                </li>`;
-                            });
-                        } else {
-                            resultsHtml += `<li class="list-group-item">Aucun forfait</li>`;
-                        }
-                        resultsHtml += `</ul>`;
-                    }
-                    if (isActivities) {
-                        const activities = Array.isArray(parkData.activities) ? parkData.activities : [];
-                        const missing = activities.filter(a => !a.image_src || a.image_src.includes('default'));
-                        const ok = activities.filter(a => a.image_src && !a.image_src.includes('default'));
-                        const allPhotosOk = activities.length > 0 && missing.length === 0;
-                        resultsHtml += `<div>`;
-                        if (activities.length === 0) {
-                            resultsHtml += `<div class='alert alert-secondary'>Aucune activité trouvée.</div>`;
-                        } else if (allPhotosOk) {
-                            // Message multilingue selon la langue courante
-                            let msg = (lang === 'en')
-                                ? 'All activities in this park have a valid photo.'
-                                : 'Toutes les activités de ce parc possèdent une photo valide.';
-                            resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
-                            if (ok.length > 0) {
-                                const okCollapseId = `${panelId}-ok-activities-collapse`;
-                                resultsHtml += `
-                                    <div class='accordion' id='${panelId}-ok-accordion'>
-                                      <div class='accordion-item'>
-                                        <h2 class='accordion-header' id='${panelId}-ok-heading'>
-                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                            ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
-                                          </button>
-                                        </h2>
-                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
-                                          <div class='accordion-body'>
-                                            <ul class='list-group'>`;
-                                ok.forEach(a => {
-                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                        ${a.name}
-                                        <span class='badge bg-success rounded-pill'>
-                                            <i class='bi bi-check-circle'></i> photo ok
-                                        </span>
-                                    </li>`;
-                                });
-                                resultsHtml += `</ul></div></div></div></div>`;
-                            }
-                        } else {
-                            if (missing.length > 0) {
-                                resultsHtml += `<div class='mb-2'><b>${lang === 'en' ? 'Activities with missing pictures' : 'Activités avec photo manquante'}</b></div><ul class='list-group mb-3'>`;
-                                missing.forEach(a => {
-                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                        ${a.name}
-                                        <span class='badge bg-danger rounded-pill'>
-                                            <i class='bi bi-exclamation-circle'></i> photo manquante
-                                        </span>
-                                    </li>`;
-                                });
-                                resultsHtml += `</ul>`;
-                            }
-                            if (ok.length > 0) {
-                                const okCollapseId = `${panelId}-ok-activities-collapse`;
-                                resultsHtml += `
-                                    <div class='accordion' id='${panelId}-ok-accordion'>
-                                      <div class='accordion-item'>
-                                        <h2 class='accordion-header' id='${panelId}-ok-heading'>
-                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                            ${lang === 'en' ? 'See activities with photo' : 'Voir les activités avec photo OK'}
-                                          </button>
-                                        </h2>
-                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-heading' data-bs-parent='#${panelId}-ok-accordion'>
-                                          <div class='accordion-body'>
-                                            <ul class='list-group'>`;
-                                ok.forEach(a => {
-                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                        ${a.name}
-                                        <span class='badge bg-success rounded-pill'>
-                                            <i class='bi bi-check-circle'></i> photo ok
-                                        </span>
-                                    </li>`;
-                                });
-                                resultsHtml += `</ul></div></div></div></div>`;
-                            }
-                        }
-                        resultsHtml += `</div>`;
-                    }
-                    if (isHousings) {
-                        const housings = Array.isArray(parkData.housings) ? parkData.housings : [];
-                        const missing = housings.filter(h => !h.image_src || h.image_src.includes('default'));
-                        const ok = housings.filter(h => h.image_src && !h.image_src.includes('default'));
-                        const allPhotosOk = housings.length > 0 && missing.length === 0;
-                        resultsHtml += `<div>`;
-                        if (housings.length === 0) {
-                            resultsHtml += `<div class='alert alert-secondary'>Aucun hébergement trouvé.</div>`;
-                        } else if (allPhotosOk) {
-                            // Message multilingue selon la langue courante
-                            let msg = (lang === 'en')
-                                ? 'All accommodations in this park have a valid photo.'
-                                : 'Tous les hébergements de ce parc possèdent une photo valide.';
-                            resultsHtml += `<div class='alert alert-success'>${msg}</div>`;
-                            if (ok.length > 0) {
-                                const okCollapseId = `${panelId}-ok-housings-collapse`;
-                                resultsHtml += `
-                                    <div class='accordion' id='${panelId}-ok-housings-accordion'>
-                                      <div class='accordion-item'>
-                                        <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
-                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                            ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
-                                          </button>
-                                        </h2>
-                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
-                                          <div class='accordion-body'>
-                                            <ul class='list-group'>`;
-                                ok.forEach(h => {
-                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                        <div>
-                                            <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
-                                            <span style='color:#888;'>${h.name}</span>
-                                        </div>
-                                        <span class='badge bg-success rounded-pill'>
-                                            <i class='bi bi-check-circle'></i> photo ok
-                                        </span>
-                                    </li>`;
-                                });
-                                resultsHtml += `</ul></div></div></div></div>`;
-                            }
-                        } else {
-                            if (missing.length > 0) {
-                                resultsHtml += `<div class='mb-2'><b>Hébergements avec photo manquante</b></div><ul class='list-group mb-3'>`;
-                                missing.forEach(h => {
-                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                        <div>
-                                            <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
-                                            <span style='color:#888;'>${h.name}</span>
-                                        </div>
-                                        <span class='badge bg-danger rounded-pill'>
-                                            <i class='bi bi-exclamation-circle'></i> photo manquante
-                                        </span>
-                                    </li>`;
-                                });
-                                resultsHtml += `</ul>`;
-                            }
-                            if (ok.length > 0) {
-                                const okCollapseId = `${panelId}-ok-housings-collapse`;
-                                resultsHtml += `
-                                    <div class='accordion' id='${panelId}-ok-housings-accordion'>
-                                      <div class='accordion-item'>
-                                        <h2 class='accordion-header' id='${panelId}-ok-housings-heading'>
-                                          <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#${okCollapseId}' aria-expanded='false' aria-controls='${okCollapseId}'>
-                                            ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
-                                          </button>
-                                        </h2>
-                                        <div id='${okCollapseId}' class='accordion-collapse collapse' aria-labelledby='${panelId}-ok-housings-heading' data-bs-parent='#${panelId}-ok-housings-accordion'>
-                                          <div class='accordion-body'>
-                                            <ul class='list-group'>`;
-                                ok.forEach(h => {
-                                    resultsHtml += `<li class='list-group-item d-flex justify-content-between align-items-center'>
-                                        <div>
-                                            <b>${h.cottage_id}</b> &mdash; ${h.type} &mdash; ${h.capacity} pers.<br>
-                                            <span style='color:#888;'>${h.name}</span>
-                                        </div>
-                                        <span class='badge bg-success rounded-pill'>
-                                            <i class='bi bi-check-circle'></i> photo ok
-                                        </span>
-                                    </li>`;
-                                });
-                                resultsHtml += `</ul></div></div></div></div>`;
-                            }
-                        }
-                        resultsHtml += `</div>`;
-                    }
-                    resultsHtml += `</div>
-                                <div class="collapse" id="details-${panelId}">
-                                    <div class="accordion" id="details-accordion-${panelId}">`;
-                    if (isRestaurants) {
-                        [
-                            {typ: 'Restaurants', arr: parkData.restaurants},
-                            {typ: 'Supermarches', arr: parkData.supermarches},
-                            {typ: 'Services', arr: parkData.services},
-                            {typ: 'Forfaits', arr: parkData.forfaits}
-                        ].forEach(({typ, arr}, idx) => {
-                            const items = Array.isArray(arr) ? arr : [];
-                            const typLabel = typ === 'Supermarches' ? 'Supermarchés & boutiques' : (typ === 'Forfaits' ? 'Forfaits' : (typ === 'Services' ? 'Services' : 'Restaurants'));
-                            const typPanelId = `details-${panelId}-${typ}`;
-                            resultsHtml += `
-                                        <div class="accordion-item">
-                                            <h2 class="accordion-header" id="${typPanelId}-heading">
-                                                <button class="accordion-button ${idx === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#${typPanelId}-collapse" aria-expanded="${idx === 0 ? 'true' : 'false'}" aria-controls="${typPanelId}-collapse">
-                                                    ${typLabel} <span class="badge bg-primary ms-2">${items.length}</span>
-                                                </button>
-                                            </h2>
-                                            <div id="${typPanelId}-collapse" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" aria-labelledby="${typPanelId}-heading" data-bs-parent="#details-accordion-${panelId}">
-                                                <div class="accordion-body">
-                                                    <ul class="list-group">`;
-                            if (items.length > 0) {
-                                items.forEach(r => {
-                                    resultsHtml += `<li class="list-group-item"><b>${r.name}</b><br>`;
-                                    if (r.description) resultsHtml += `<i>${r.description}</i><br>`;
-                                    if (r.cuisine_type) resultsHtml += `<b>Type :</b> ${r.cuisine_type}<br>`;
-                                    if (r.horaires) resultsHtml += `<b>Horaires :</b> ${r.horaires}<br>`;
-                                    if (r.link) resultsHtml += `<a href="${r.link}" target="_blank">Voir le menu</a><br>`;
-                                    if (r.images && r.images.length > 0) {
-                                        resultsHtml += r.images.filter(img => !!img).map(img => `<img src="${img}" alt="photo ${r.name}" style="max-width:120px;max-height:80px;margin:2px;" />`).join('');
-                                    }
-                                    resultsHtml += `</li>`;
-                                });
-                            } else {
-                                resultsHtml += `<li class="list-group-item">Aucun ${typLabel.toLowerCase()}</li>`;
-                            }
-                            resultsHtml += `</ul></div></div></div>`;
-                        });
-                    }
-                    resultsHtml += `</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                    parcIndex++;
-                }
-                resultsHtml += `</div>`;
-            }
-
-            // Afficher les résultats
-            resultsContainer.innerHTML = resultsHtml;
-            resultsContainer.style.display = 'block';
-            // Mettre à jour les traductions
-            updateTranslations(resultsContainer);
-            // Marquer comme chargé
-            tabPane.setAttribute('data-loaded', 'true');
-
-        } catch (error) {
-            // Afficher l'erreur
-            tabPane.querySelector('.country-loading').style.display = 'none';
-            const errorContainer = tabPane.querySelector('.country-error');
-            errorContainer.textContent = `Erreur lors du chargement des résultats : ${error.message}`;
-            errorContainer.style.display = 'block';
+            if (hasMissingPhotos) break;
         }
-    }
 
-    // Gestionnaire d'événements pour le changement d'onglet
-    document.addEventListener('shown.bs.tab', function (event) {
-        const country = event.target.textContent.trim();
-        const searchType = new URLSearchParams(window.location.search).get('type');
-        const parc = new URLSearchParams(window.location.search).get('parc');
-        loadCountryResults(country, searchType, parc);
-    });
+        // Afficher le bandeau global avec style Sneat
+        resultsHtml += `
+            <div class="alert ${hasMissingPhotos ? 'alert-warning' : 'alert-success'} mb-4 d-flex align-items-center">
+                <i class="bi bi-${hasMissingPhotos ? 'exclamation-triangle-fill' : 'check-circle-fill'} me-2 fs-5"></i>
+                <span>${hasMissingPhotos ? (lang === 'en' ? 'Missing pictures' : 'Photos manquantes') : (lang === 'en' ? 'Pictures OK' : 'Photos OK')}</span>
+            </div>
+        `;
 
-    // Charger les résultats du premier pays au chargement de la page
-    document.addEventListener('DOMContentLoaded', function() {
-        const firstCountry = document.querySelector('.nav-link.active').textContent.trim();
-        const searchType = new URLSearchParams(window.location.search).get('type');
-        const parc = new URLSearchParams(window.location.search).get('parc');
-        loadCountryResults(firstCountry, searchType, parc);
-    });
+        // Fonction utilitaire pour générer des IDs sûrs
+        function safeId(str) {
+            return str.replace(/[^a-zA-Z0-9]/g, '');
+        }
 
-    // Fonction pour mettre à jour les traductions après le chargement dynamique
-    function updateTranslations(container) {
-        const currentLang = document.documentElement.lang;
-        fetch(`/set_language/${currentLang}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
+        // Fonction pour vérifier si une image est un placeholder
+        function isPlaceholder(url) {
+            if (!url) return true;
+            return url.includes('default') || url.includes('AAA_');
+        }
+
+        // Séparer les parcs en deux catégories : OK et avec photos manquantes
+        function parkHasMissingPhotos(parkData) {
+            if (isActivities && parkData.activities) {
+                for (const a of parkData.activities) {
+                    if (!a.has_photos) return true;
+                }
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                container.querySelectorAll('[data-translate]').forEach(element => {
-                    const key = element.getAttribute('data-translate');
-                    if (data.translations && data.translations[key]) {
-                        element.textContent = data.translations[key];
+            if (isRestaurants) {
+                const restaurantSections = ['restaurants', 'supermarches', 'services', 'forfaits'];
+                for (const section of restaurantSections) {
+                    if (parkData[section]) {
+                        for (const r of parkData[section]) {
+                            if (!r.has_photos) return true;
+                        }
                     }
-                });
+                }
             }
-        });
+            if (isHousings && parkData.housings) {
+                for (const h of parkData.housings) {
+                    if (!h.has_photos) return true;
+                }
+            }
+            return false;
+        }
+
+        // Collecter les parcs dans deux listes
+        let parksWithMissing = [];
+        let parksOk = [];
+
+        if (country === "Tous") {
+            for (const [countryName, parks] of Object.entries(data.results)) {
+                for (const [parkName, parkData] of Object.entries(parks)) {
+                    const parkInfo = { countryName, parkName, parkData, prefix: `${countryName} - ` };
+                    if (parkHasMissingPhotos(parkData)) {
+                        parksWithMissing.push(parkInfo);
+                    } else {
+                        parksOk.push(parkInfo);
+                    }
+                }
+            }
+        } else {
+            for (const [parkName, parkData] of Object.entries(data.results[country] || {})) {
+                const parkInfo = { countryName: country, parkName, parkData, prefix: '' };
+                if (parkHasMissingPhotos(parkData)) {
+                    parksWithMissing.push(parkInfo);
+                } else {
+                    parksOk.push(parkInfo);
+                }
+            }
+        }
+
+        // Section "Photos manquantes"
+        if (parksWithMissing.length > 0) {
+            resultsHtml += `<h5 class="mb-3 text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>${lang === 'en' ? 'Missing photos' : 'Photos manquantes'} <span class="badge bg-danger">${parksWithMissing.length}</span></h5>`;
+            let accordionIdMissing = `accordion-${country.toLowerCase()}-missing`;
+            resultsHtml += `<div class="accordion mb-4" id="${accordionIdMissing}">`;
+            parksWithMissing.forEach((park, index) => {
+                let safePanel = safeId(`${park.countryName}-${park.parkName}`);
+                let panelId = `${accordionIdMissing}-panel-${safePanel}`;
+                let headingId = `${panelId}-heading`;
+                let collapseId = `${panelId}-collapse`;
+                resultsHtml += buildParkAccordionItem(park.parkName, park.parkData, panelId, headingId, collapseId, accordionIdMissing, isActivities, isRestaurants, isHousings, lang, park.prefix);
+            });
+            resultsHtml += `</div>`;
+        }
+
+        // Section "Parcs OK"
+        if (parksOk.length > 0) {
+            resultsHtml += `<h5 class="mb-3 text-success"><i class="bi bi-check-circle-fill me-2"></i>${lang === 'en' ? 'Parks OK' : 'Parcs OK'} <span class="badge bg-success">${parksOk.length}</span></h5>`;
+            let accordionIdOk = `accordion-${country.toLowerCase()}-ok`;
+            resultsHtml += `<div class="accordion mb-4" id="${accordionIdOk}">`;
+            parksOk.forEach((park, index) => {
+                let safePanel = safeId(`${park.countryName}-${park.parkName}`);
+                let panelId = `${accordionIdOk}-panel-${safePanel}`;
+                let headingId = `${panelId}-heading`;
+                let collapseId = `${panelId}-collapse`;
+                resultsHtml += buildParkAccordionItem(park.parkName, park.parkData, panelId, headingId, collapseId, accordionIdOk, isActivities, isRestaurants, isHousings, lang, park.prefix);
+            });
+            resultsHtml += `</div>`;
+        }
+
+        // Si aucun parc trouvé
+        if (parksWithMissing.length === 0 && parksOk.length === 0) {
+            resultsHtml += `<div class="alert alert-secondary"><i class="bi bi-info-circle me-2"></i>${lang === 'en' ? 'No park found.' : 'Aucun parc trouvé.'}</div>`;
+        }
+
+        // Afficher les résultats
+        resultsContainer.innerHTML = resultsHtml;
+        resultsContainer.style.display = 'block';
+        // Mettre à jour les traductions
+        updateTranslations(resultsContainer);
+        // Marquer comme chargé
+        tabPane.setAttribute('data-loaded', 'true');
+
+    } catch (error) {
+        // Afficher l'erreur
+        tabPane.querySelector('.country-loading').style.display = 'none';
+        const errorContainer = tabPane.querySelector('.country-error');
+        errorContainer.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> Erreur lors du chargement des résultats : ${error.message}`;
+        errorContainer.style.display = 'block';
     }
-    </script>
-</body>
-</html>
+}
+
+// Fonction pour construire un élément d'accordéon de parc
+function buildParkAccordionItem(parkName, parkData, panelId, headingId, collapseId, accordionId, isActivities, isRestaurants, isHousings, lang, prefix) {
+    let html = `
+    <div class="accordion-item card mb-3">
+        <h2 class="accordion-header" id="${headingId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+                <i class="bi bi-pin-map me-2"></i> ${prefix}${parkName}
+            </button>
+        </h2>
+        <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#${accordionId}">
+            <div class="accordion-body">`;
+
+    if (isActivities) {
+        html += buildActivitiesSection(parkData, panelId, lang);
+    }
+
+    if (isRestaurants) {
+        html += buildRestaurantsSection(parkData, panelId, lang);
+    }
+
+    if (isHousings) {
+        html += buildHousingsSection(parkData, panelId, lang);
+    }
+
+    html += `</div></div></div>`;
+    return html;
+}
+
+// Fonction pour construire la section activités
+function buildActivitiesSection(parkData, panelId, lang) {
+    const activities = Array.isArray(parkData.activities) ? parkData.activities : [];
+    // Utiliser has_photos calculé par le backend
+    const missing = activities.filter(a => !a.has_photos);
+    const ok = activities.filter(a => a.has_photos);
+    const allPhotosOk = activities.length > 0 && missing.length === 0;
+
+    let html = '<div>';
+
+    if (activities.length === 0) {
+        html += `<div class="alert alert-secondary"><i class="bi bi-info-circle me-2"></i>${lang === 'en' ? 'No activity found.' : 'Aucune activité trouvée.'}</div>`;
+    } else if (allPhotosOk) {
+        html += `<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>${lang === 'en' ? 'All activities in this park have a valid photo.' : 'Toutes les activités de ce parc possèdent une photo valide.'}</div>`;
+        html += buildOkItemsAccordion(ok, panelId, 'activities', lang, 'activity');
+    } else {
+        if (missing.length > 0) {
+            html += `<h6 class="mb-3"><i class="bi bi-exclamation-circle text-danger me-2"></i>${lang === 'en' ? 'Activities with missing pictures' : 'Activités avec photo manquante'}</h6>`;
+            html += `<div class="table-responsive"><table class="table table-hover"><tbody>`;
+            missing.forEach(a => {
+                html += `<tr>
+                    <td>${a.name}</td>
+                    <td class="text-end"><span class="badge bg-label-danger"><i class="bi bi-exclamation-circle"></i> ${lang === 'en' ? 'missing' : 'photo manquante'}</span></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+        }
+        html += buildOkItemsAccordion(ok, panelId, 'activities', lang, 'activity');
+    }
+
+    html += '</div>';
+    return html;
+}
+
+// Fonction pour construire la section restaurants
+function buildRestaurantsSection(parkData, panelId, lang) {
+    let html = '<div>';
+
+    const sections = [
+        { key: 'restaurants', label: 'Restaurants', icon: 'cup-hot' },
+        { key: 'supermarches', label: 'Supermarchés & boutiques', icon: 'cart' },
+        { key: 'services', label: 'Services', icon: 'gear' },
+        { key: 'forfaits', label: 'Forfaits', icon: 'ticket' }
+    ];
+
+    sections.forEach(section => {
+        const items = Array.isArray(parkData[section.key]) ? parkData[section.key] : [];
+        html += `<h6 class="mb-3"><i class="bi bi-${section.icon} me-2"></i>${section.label}</h6>`;
+
+        if (items.length > 0) {
+            html += `<div class="table-responsive mb-4"><table class="table table-hover"><tbody>`;
+            items.forEach(r => {
+                const hasPhoto = r.has_photos === true || r.has_photos === 'true' || r.has_photos === 1 || r.has_photos === '1';
+                html += `<tr>
+                    <td>${r.name}</td>
+                    <td class="text-end">
+                        <span class="badge ${hasPhoto ? 'bg-label-success' : 'bg-label-danger'}">
+                            <i class="bi bi-${hasPhoto ? 'check-circle' : 'exclamation-circle'}"></i>
+                            ${hasPhoto ? 'photo ok' : 'photo manquante'}
+                        </span>
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+        } else {
+            html += `<p class="text-muted mb-4">${lang === 'en' ? 'None' : 'Aucun'}</p>`;
+        }
+    });
+
+    html += '</div>';
+    return html;
+}
+
+// Fonction pour construire la section hébergements
+function buildHousingsSection(parkData, panelId, lang) {
+    const housings = Array.isArray(parkData.housings) ? parkData.housings : [];
+    // Utiliser has_photos calculé par le backend
+    const missing = housings.filter(h => !h.has_photos);
+    const ok = housings.filter(h => h.has_photos);
+    const allPhotosOk = housings.length > 0 && missing.length === 0;
+
+    let html = '<div>';
+
+    if (housings.length === 0) {
+        html += `<div class="alert alert-secondary"><i class="bi bi-info-circle me-2"></i>${lang === 'en' ? 'No accommodation found.' : 'Aucun hébergement trouvé.'}</div>`;
+    } else if (allPhotosOk) {
+        html += `<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>${lang === 'en' ? 'All accommodations in this park have a valid photo.' : 'Tous les hébergements de ce parc possèdent une photo valide.'}</div>`;
+        html += buildOkHousingsAccordion(ok, panelId, lang);
+    } else {
+        if (missing.length > 0) {
+            html += `<h6 class="mb-3"><i class="bi bi-exclamation-circle text-danger me-2"></i>${lang === 'en' ? 'Accommodations with missing pictures' : 'Hébergements avec photo manquante'}</h6>`;
+            html += `<div class="table-responsive mb-4"><table class="table table-hover"><tbody>`;
+            missing.forEach(h => {
+                html += `<tr>
+                    <td>
+                        <strong>${h.cottage_id}</strong> — ${h.type} — ${h.capacity} pers.<br>
+                        <small class="text-muted">${h.name}</small>
+                    </td>
+                    <td class="text-end"><span class="badge bg-label-danger"><i class="bi bi-exclamation-circle"></i> photo manquante</span></td>
+                </tr>`;
+            });
+            html += `</tbody></table></div>`;
+        }
+        html += buildOkHousingsAccordion(ok, panelId, lang);
+    }
+
+    html += '</div>';
+    return html;
+}
+
+// Fonction pour construire l'accordéon des items OK
+function buildOkItemsAccordion(items, panelId, type, lang, itemType) {
+    if (items.length === 0) return '';
+
+    const collapseId = `${panelId}-ok-${type}-collapse`;
+    let html = `
+    <div class="accordion mt-3" id="${panelId}-ok-${type}-accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="${panelId}-ok-${type}-heading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false">
+                    <i class="bi bi-check-circle text-success me-2"></i>
+                    ${lang === 'en' ? `See ${type} with photo` : `Voir les ${type === 'activities' ? 'activités' : 'éléments'} avec photo OK`}
+                    <span class="badge bg-success ms-2">${items.length}</span>
+                </button>
+            </h2>
+            <div id="${collapseId}" class="accordion-collapse collapse">
+                <div class="accordion-body p-0">
+                    <div class="table-responsive"><table class="table table-hover mb-0"><tbody>`;
+
+    items.forEach(item => {
+        html += `<tr>
+            <td>${item.name}</td>
+            <td class="text-end"><span class="badge bg-label-success"><i class="bi bi-check-circle"></i> photo ok</span></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div></div></div></div></div>`;
+    return html;
+}
+
+// Fonction pour construire l'accordéon des hébergements OK
+function buildOkHousingsAccordion(items, panelId, lang) {
+    if (items.length === 0) return '';
+
+    const collapseId = `${panelId}-ok-housings-collapse`;
+    let html = `
+    <div class="accordion mt-3" id="${panelId}-ok-housings-accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="${panelId}-ok-housings-heading">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false">
+                    <i class="bi bi-check-circle text-success me-2"></i>
+                    ${lang === 'en' ? 'See accommodations with photo' : 'Voir les hébergements avec photo OK'}
+                    <span class="badge bg-success ms-2">${items.length}</span>
+                </button>
+            </h2>
+            <div id="${collapseId}" class="accordion-collapse collapse">
+                <div class="accordion-body p-0">
+                    <div class="table-responsive"><table class="table table-hover mb-0"><tbody>`;
+
+    items.forEach(h => {
+        html += `<tr>
+            <td>
+                <strong>${h.cottage_id}</strong> — ${h.type} — ${h.capacity} pers.<br>
+                <small class="text-muted">${h.name}</small>
+            </td>
+            <td class="text-end"><span class="badge bg-label-success"><i class="bi bi-check-circle"></i> photo ok</span></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div></div></div></div></div>`;
+    return html;
+}
+
+// Gestionnaire d'événements pour le changement d'onglet
+document.addEventListener('shown.bs.tab', function (event) {
+    const country = event.target.textContent.trim();
+    const searchType = new URLSearchParams(window.location.search).get('type');
+    const parc = new URLSearchParams(window.location.search).get('parc');
+    loadCountryResults(country, searchType, parc);
+});
+
+// Charger les résultats du premier pays au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const firstCountry = document.querySelector('.nav-link.active').textContent.trim();
+    const searchType = new URLSearchParams(window.location.search).get('type');
+    const parc = new URLSearchParams(window.location.search).get('parc');
+    loadCountryResults(firstCountry, searchType, parc);
+});
+
+// Fonction pour mettre à jour les traductions après le chargement dynamique
+function updateTranslations(container) {
+    const currentLang = document.documentElement.lang;
+    fetch(`/set_language/${currentLang}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            container.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (data.translations && data.translations[key]) {
+                    element.textContent = data.translations[key];
+                }
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

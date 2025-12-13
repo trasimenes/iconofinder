@@ -6,8 +6,10 @@ import re
 class HousingService:
     def __init__(self):
         self.session = requests.Session()
+        # Headers minimaux comme curl pour éviter les 403
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'curl/8.7.1',
+            'Accept': '*/*'
         })
 
     def get_urls(self):
@@ -152,16 +154,16 @@ class HousingService:
                     data_src = img.get('data-src', '')
                     data_url_desktop = img.get('data-url-desktop', '')
                     
-                    # Une image est valide si elle a une URL et ne contient pas "default" ou "placeholder"
+                    # Une image est valide si elle a une URL et ne contient pas /default/ dans le chemin
+                    # Note: AAA_XXXXX sont des images valides, pas des placeholders
                     is_valid = False
-                    
+
                     # Vérifier les différentes sources d'URL
                     for url in [data_src, src, data_url_desktop]:
-                        if url and not any(invalid in url.lower() for invalid in ['default', 'placeholder', 'blank']):
-                            if any(valid in url for valid in ['photos.centerparcs.com', 'fp2/photos']):
-                                is_valid = True
-                                has_photos = True
-                                break
+                        if url and '/default/' not in url.lower():
+                            is_valid = True
+                            has_photos = True
+                            break
                     
                     details = {
                         'cottage_id': cottage_id,
@@ -183,10 +185,9 @@ class HousingService:
                 image_src = ''
                 for img in all_images:
                     for url in [img.get('data-src', ''), img.get('src', ''), img.get('data-url-desktop', '')]:
-                        if url and not any(invalid in url.lower() for invalid in ['default', 'placeholder', 'blank']):
-                            if any(valid in url for valid in ['photos.centerparcs.com', 'fp2/photos']):
-                                image_src = url
-                                break
+                        if url and '/default/' not in url.lower():
+                            image_src = url
+                            break
                     if image_src:
                         break
                 

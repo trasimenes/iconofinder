@@ -32,7 +32,7 @@ def main():
     
     # Générer le fichier de configuration Python
     with open('config/urls.py', 'w', encoding='utf-8') as f:
-        f.write('# Configuration des URLs des parcs Center Parcs\n\n')
+        f.write('# Configuration des URLs des parcs\n\n')
         f.write('PARKS_URLS = {\n')
         for country, parks in all_parks_urls.items():
             f.write(f'    "{country}": {{\n')
