@@ -136,20 +136,22 @@
     if (canvas) {
         const ctx = canvas.getContext('2d');
         const container = canvas.parentElement;
-
-        function resizeCanvas() {
-            canvas.width = container.offsetWidth;
-            canvas.height = container.offsetHeight;
-        }
-        resizeCanvas();
-
         const color = '#FF694B';
         const lineCount = 40;
         const offset = Math.PI * 3.5;
 
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = color;
-        ctx.fillStyle = color;
+        function applyStyles() {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.fillStyle = color;
+        }
+
+        function resizeCanvas() {
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            applyStyles();
+        }
+        resizeCanvas();
 
         function Line(pos) { this.pos = pos; }
         Line.prototype = {
