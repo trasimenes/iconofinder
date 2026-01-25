@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html
-  lang="fr"
+  lang="{{ lang }}"
   class="light-style customizer-hide"
   dir="ltr"
   data-theme="theme-default"
@@ -59,8 +59,8 @@
                     </div>
                     <!-- /Logo -->
 
-                    <h4 class="mb-2">Bienvenue !</h4>
-                    <p class="mb-4">Connectez-vous pour acceder au tableau de bord</p>
+                    <h4 class="mb-2">{% if lang == 'fr' %}Bienvenue !{% else %}Welcome!{% endif %}</h4>
+                    <p class="mb-4">{% if lang == 'fr' %}Connectez-vous pour acceder au tableau de bord{% else %}Sign in to access the dashboard{% endif %}</p>
 
                     {% if error %}
                     <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -71,19 +71,19 @@
 
                     <form id="formAuthentication" class="mb-3" action="/login" method="POST">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Utilisateur</label>
+                            <label for="username" class="form-label">{% if lang == 'fr' %}Utilisateur{% else %}Username{% endif %}</label>
                             <input
                                 type="text"
                                 class="form-control"
                                 id="username"
                                 name="username"
-                                placeholder="Entrez votre identifiant"
+                                placeholder="{% if lang == 'fr' %}Entrez votre identifiant{% else %}Enter your username{% endif %}"
                                 autofocus
                                 required
                             />
                         </div>
                         <div class="mb-3 form-password-toggle">
-                            <label class="form-label" for="password">Mot de passe</label>
+                            <label class="form-label" for="password">{% if lang == 'fr' %}Mot de passe{% else %}Password{% endif %}</label>
                             <div class="input-group input-group-merge">
                                 <input
                                     type="password"
@@ -99,7 +99,7 @@
                             </div>
                         </div>
                         <button class="btn btn-primary d-grid w-100" type="submit">
-                            Se connecter
+                            {% if lang == 'fr' %}Se connecter{% else %}Sign in{% endif %}
                         </button>
                     </form>
                 </div>

@@ -218,6 +218,10 @@ def login():
     if session.get('logged_in'):
         return redirect(url_for('home'))
 
+    # Detect browser language
+    accept_language = request.headers.get('Accept-Language', '')
+    lang = 'fr' if accept_language.lower().startswith('fr') else 'en'
+
     error = None
     if request.method == 'POST':
         username = request.form.get('username', '')
@@ -229,9 +233,9 @@ def login():
             next_url = request.args.get('next', url_for('home'))
             return redirect(next_url)
         else:
-            error = "Identifiants incorrects"
+            error = "Identifiants incorrects" if lang == 'fr' else "Invalid credentials"
 
-    return render_template('login.html', error=error)
+    return render_template('login.html', error=error, lang=lang)
 
 
 @app.route('/logout')
