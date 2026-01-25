@@ -19,13 +19,21 @@
             </div>
             <div class="card-body">
                 <form action="/results" method="GET">
+                    {% set country_keys = {
+                        'Tous': 'all_countries',
+                        'France': 'country_france',
+                        'Belgique': 'country_belgium',
+                        'Allemagne': 'country_germany',
+                        'Pays-Bas': 'country_netherlands',
+                        'Danemark': 'country_denmark'
+                    } %}
                     <div class="row mb-3">
                         <label class="col-sm-2 col-form-label" for="country" data-translate="select_country">{{ translate('select_country') }}</label>
                         <div class="col-sm-10">
                             <select class="form-select" id="country" name="country" required>
                                 <option value="" data-translate="choose_country">{{ translate('choose_country') }}</option>
                                 {% for country in countries %}
-                                <option value="{{ country }}">{{ country }}</option>
+                                <option value="{{ country }}" data-translate="{{ country_keys.get(country, '') }}">{{ translate(country_keys.get(country, '')) or country }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -46,9 +54,10 @@
                         <div class="col-sm-10">
                             <select class="form-select" id="type" name="type" required>
                                 <option value="" data-translate="choose_type">{{ translate('choose_type') }}</option>
-                                <option value="Activités" data-translate="activities">{{ translate('activities') }}</option>
-                                <option value="Hébergements" data-translate="accommodations">{{ translate('accommodations') }}</option>
-                                <option value="Restaurants" data-translate="restaurants">{{ translate('restaurants') }}</option>
+                                <option value="Activités" data-translate="activities" {% if preselected_type == 'Activités' %}selected{% endif %}>{{ translate('activities') }}</option>
+                                <option value="Hébergements" data-translate="accommodations" {% if preselected_type == 'Hébergements' %}selected{% endif %}>{{ translate('accommodations') }}</option>
+                                <option value="Restaurants" data-translate="restaurants" {% if preselected_type == 'Restaurants' %}selected{% endif %}>{{ translate('restaurants') }}</option>
+                                <option value="Aux alentours" data-translate="surroundings" {% if preselected_type == 'Aux alentours' %}selected{% endif %}>{{ translate('surroundings') }}</option>
                             </select>
                         </div>
                     </div>
@@ -77,17 +86,23 @@
                         <div class="d-flex justify-content-between flex-sm-row flex-column gap-3">
                             <div class="d-flex flex-sm-column flex-row align-items-start justify-content-between">
                                 <div class="card-title">
-                                    <h5 class="text-nowrap mb-2">Raccourcis</h5>
-                                    <span class="badge bg-label-warning rounded-pill">Recherche rapide</span>
+                                    <h5 class="text-nowrap mb-2">{{ translate('shortcuts') }}</h5>
+                                    <span class="badge bg-label-warning rounded-pill">{{ translate('quick_search') }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="mt-3">
-                            <a href="/results?country=France&parc=Tous&type=Activités" class="btn btn-sm btn-outline-primary w-100 mb-2">
-                                <i class="bi bi-bicycle me-1"></i> Activités France
+                            <a href="/?type=Activités" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-bicycle me-1"></i> {{ translate('activities') }}
                             </a>
-                            <a href="/results?country=France&parc=Tous&type=Restaurants" class="btn btn-sm btn-outline-primary w-100 mb-2">
-                                <i class="bi bi-cup-hot me-1"></i> Restaurants France
+                            <a href="/?type=Hébergements" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-house me-1"></i> {{ translate('accommodations') }}
+                            </a>
+                            <a href="/?type=Restaurants" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-cup-hot me-1"></i> {{ translate('restaurants') }}
+                            </a>
+                            <a href="/?type=Aux alentours" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                <i class="bi bi-map me-1"></i> {{ translate('surroundings') }}
                             </a>
                             <a href="/dashboard" class="btn btn-sm btn-outline-secondary w-100">
                                 <i class="bi bi-bar-chart me-1"></i> Dashboard

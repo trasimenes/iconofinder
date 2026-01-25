@@ -62,62 +62,69 @@
 
                 <ul class="menu-inner py-1">
                     <!-- Accueil -->
-                    <li class="menu-item {% if request.endpoint == 'home' %}active{% endif %}">
+                    <li class="menu-item {% if request.endpoint == 'home' and not request.args.get('type') %}active{% endif %}">
                         <a href="/" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-home-circle"></i>
-                            <div>Accueil</div>
+                            <div>{{ translate('menu_home') }}</div>
                         </a>
                     </li>
 
                     <!-- Recherche -->
                     <li class="menu-header small text-uppercase">
-                        <span class="menu-header-text">Recherche</span>
+                        <span class="menu-header-text">{{ translate('menu_search') }}</span>
                     </li>
 
-                    <li class="menu-item {% if request.endpoint == 'results' and request.args.get('type') == 'Activités' %}active{% endif %}">
-                        <a href="/results?country=France&parc=Tous&type=Activités" class="menu-link">
+                    <li class="menu-item {% if request.endpoint == 'home' and request.args.get('type') == 'Activités' %}active{% endif %}">
+                        <a href="/?type=Activités" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-cycling"></i>
-                            <div>Activités</div>
+                            <div>{{ translate('menu_activities') }}</div>
                         </a>
                     </li>
 
-                    <li class="menu-item {% if request.endpoint == 'results' and request.args.get('type') == 'Restaurants' %}active{% endif %}">
-                        <a href="/results?country=France&parc=Tous&type=Restaurants" class="menu-link">
+                    <li class="menu-item {% if request.endpoint == 'home' and request.args.get('type') == 'Restaurants' %}active{% endif %}">
+                        <a href="/?type=Restaurants" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-restaurant"></i>
-                            <div>Restaurants</div>
+                            <div>{{ translate('menu_restaurants') }}</div>
                         </a>
                     </li>
 
-                    <li class="menu-item {% if request.endpoint == 'results' and request.args.get('type') == 'Hébergements' %}active{% endif %}">
-                        <a href="/results?country=France&parc=Tous&type=Hébergements" class="menu-link">
+                    <li class="menu-item {% if request.endpoint == 'home' and request.args.get('type') == 'Hébergements' %}active{% endif %}">
+                        <a href="/?type=Hébergements" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-building-house"></i>
-                            <div>Hébergements</div>
+                            <div>{{ translate('menu_accommodations') }}</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item {% if request.endpoint == 'home' and request.args.get('type') == 'Aux alentours' %}active{% endif %}">
+                        <a href="/?type=Aux alentours" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-map-alt"></i>
+                            <div>{{ translate('menu_surroundings') }}</div>
                         </a>
                     </li>
 
                     <!-- Outils -->
                     <li class="menu-header small text-uppercase">
-                        <span class="menu-header-text">Outils</span>
+                        <span class="menu-header-text">{{ translate('menu_tools') }}</span>
                     </li>
 
-                    <li class="menu-item {% if request.endpoint == 'snapshots' %}active{% endif %}">
+                    <li class="menu-item {% if request.endpoint == 'snapshot_manager' %}active{% endif %}">
                         <a href="/snapshots" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-archive"></i>
-                            <div>Snapshots</div>
+                            <div>{{ translate('menu_snapshots') }}</div>
                         </a>
                     </li>
 
-                    <li class="menu-item {% if request.endpoint == 'stats' %}active{% endif %}">
+                    <li class="menu-item {% if request.endpoint == 'stats_view' %}active{% endif %}">
                         <a href="/stats" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-line-chart"></i>
-                            <div>{{ translate('stats') }}</div>
+                            <div>{{ translate('menu_stats') }}</div>
                         </a>
                     </li>
 
                     <li class="menu-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
                         <a href="/dashboard" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
-                            <div>Dashboard</div>
+                            <div>{{ translate('menu_dashboard') }}</div>
                         </a>
                     </li>
                 </ul>

@@ -9,6 +9,7 @@ from config.urls import PARKS_URLS
 from services.activities import ActivityService
 from services.housing import HousingService
 from services.restaurants import RestaurantService
+from services.surroundings import SurroundingsService
 from utils.translations import load_translations, get_translation, translations
 from utils.stats import compute_stats
 
@@ -41,6 +42,7 @@ print("=== FLASK SERVEUR EN TRAIN DE DÉMARRER ===")
 activity_service = ActivityService()
 housing_service = HousingService()
 restaurant_service = RestaurantService()
+surroundings_service = SurroundingsService()
 
 SNAPSHOT_FILE = 'snapshots.json'
 PROGRESS_FILE = 'snapshot_progress.json'
@@ -140,6 +142,34 @@ def search_restaurants(country, parc, logs=None):
     logs.append(f"[RESTAURANTS] Fin recherche pour {country} - {parc}")
     return final_results
 
+def search_surroundings(country, parc, logs=None):
+    if logs is None:
+        logs = []
+    logs.append(f"[ALENTOURS] Début recherche pour {country} - {parc}")
+    final_results = {}
+    countries_to_process = [country] if country != "Tous" else PARKS_URLS.keys()
+    for current_country in countries_to_process:
+        if parc == "Tous":
+            all_parks_results = {}
+            for park_name, park_urls in PARKS_URLS.get(current_country, {}).items():
+                surroundings_url = park_urls.get("surroundings")
+                if surroundings_url:
+                    logs.append(f"[ALENTOURS] {current_country} - {park_name}")
+                    result = surroundings_service.get_surroundings_with_placeholders(surroundings_url)
+                    result["url"] = surroundings_url
+                    all_parks_results[park_name] = result
+            if all_parks_results:
+                final_results[current_country] = all_parks_results
+        else:
+            surroundings_url = PARKS_URLS.get(current_country, {}).get(parc, {}).get("surroundings")
+            if surroundings_url:
+                logs.append(f"[ALENTOURS] {current_country} - {parc}")
+                result = surroundings_service.get_surroundings_with_placeholders(surroundings_url)
+                result["url"] = surroundings_url
+                final_results[current_country] = {parc: result}
+    logs.append(f"[ALENTOURS] Fin recherche pour {country} - {parc}")
+    return final_results
+
 def format_park_name(name):
     """
     Formate le nom du parc pour l'URL :
@@ -153,7 +183,14 @@ def format_park_name(name):
 @app.before_request
 def before_request():
     if 'language' not in session:
-        session['language'] = 'fr'
+        # Détecter la langue du navigateur via l'en-tête Accept-Language
+        accept_language = request.headers.get('Accept-Language', '')
+        # Vérifier si l'anglais est préféré (en, en-US, en-GB, etc.)
+        if accept_language.lower().startswith('en'):
+            session['language'] = 'en'
+        else:
+            # Par défaut français
+            session['language'] = 'fr'
 
 @app.route('/robots.txt')
 def robots():
@@ -162,7 +199,9 @@ def robots():
 @app.route('/')
 def home():
     countries = ['Tous'] + sorted(list(PARKS_URLS.keys()))  # Ajoute "Tous" et trie les pays
-    return render_template('index.html', countries=countries, translate=get_translation)
+    # Récupérer le type pré-sélectionné depuis l'URL (optionnel)
+    preselected_type = request.args.get('type', '')
+    return render_template('index.html', countries=countries, translate=get_translation, preselected_type=preselected_type)
 
 @app.route('/set_language/<lang>')
 def set_language(lang):
@@ -186,19 +225,76 @@ def get_parks():
     country = request.args.get('country')
     if not country:
         return jsonify({'error': 'Pays non spécifié', 'parks': []})
-    
+
     if country == 'Tous':
         # Pour "Tous", on retourne tous les parcs de tous les pays
         all_parks = []
         for parks in PARKS_URLS.values():
             all_parks.extend(parks.keys())
         return jsonify({'parks': sorted(list(set(all_parks)))})  # Supprime les doublons et trie
-    
+
     if country not in PARKS_URLS:
         return jsonify({'error': 'Pays non valide', 'parks': []})
-    
+
     parks = sorted(list(PARKS_URLS[country].keys()))  # Trie les parcs par ordre alphabétique
     return jsonify({'parks': parks})
+
+@app.route('/api/parks_list')
+def get_parks_list():
+    """Retourne la liste des parcs pour un pays donné (pour le chargement progressif)"""
+    country = request.args.get('country')
+    if not country or country not in PARKS_URLS:
+        return jsonify({'error': 'Pays non valide', 'parks': []})
+
+    parks = list(PARKS_URLS[country].keys())
+    return jsonify({'country': country, 'parks': parks})
+
+@app.route('/api/search_park')
+def search_single_park():
+    """Recherche un seul parc (pour le chargement progressif)"""
+    country = request.args.get('country')
+    park = request.args.get('park')
+    search_type = request.args.get('type')
+
+    if not all([country, park, search_type]):
+        return jsonify({'error': 'Paramètres manquants'})
+
+    if country not in PARKS_URLS or park not in PARKS_URLS.get(country, {}):
+        return jsonify({'error': 'Parc non trouvé'})
+
+    park_urls = PARKS_URLS[country][park]
+    result = {}
+
+    try:
+        if search_type == "Activités":
+            activities_url = park_urls.get("activities")
+            if activities_url:
+                result = activity_service.get_activities_with_placeholders(activities_url)
+                result["url"] = activities_url
+        elif search_type == "Hébergements":
+            cottages_url = park_urls.get("cottages")
+            if cottages_url:
+                result = housing_service.get_housings_with_placeholders(cottages_url)
+                result["url"] = cottages_url
+        elif search_type == "Restaurants":
+            restaurants_url = park_urls.get("restaurants")
+            if restaurants_url:
+                result = restaurant_service.get_restaurants_with_placeholders(restaurants_url)
+                result["url"] = restaurants_url
+        elif search_type == "Aux alentours":
+            surroundings_url = park_urls.get("surroundings")
+            if surroundings_url:
+                result = surroundings_service.get_surroundings_with_placeholders(surroundings_url)
+                result["url"] = surroundings_url
+
+        return jsonify({
+            'country': country,
+            'park': park,
+            'type': search_type,
+            'result': result
+        })
+    except Exception as e:
+        return jsonify({'error': str(e), 'country': country, 'park': park})
 
 @app.route('/recherche')
 def recherche():
@@ -219,6 +315,8 @@ def api_search():
             results = search_activities(country, parc, logs=logs)
         elif search_type == "Restaurants":
             results = search_restaurants(country, parc, logs=logs)
+        elif search_type == "Aux alentours":
+            results = search_surroundings(country, parc, logs=logs)
         else:
             return jsonify({'error': 'Type de recherche non valide', 'logs': logs})
         return jsonify(results=results, logs=logs)

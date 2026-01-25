@@ -21,3 +21,6 @@ map.html
 # Variables d'environnement
 .env
 .env.*
+
+# Services de booking (non fonctionnels, contiennent URLs sensibles)
+services/booking_*.py
