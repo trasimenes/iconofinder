@@ -101,6 +101,22 @@ class SurroundingsService:
 
                 poi_name = title.text.strip() if title else "Lieu sans nom"
 
+                # Nettoyer le nom : retirer le nom du parc s'il est à la fin
+                park_names = [
+                    "Villages Nature Paris", "Le Lac d'Ailette", "Les Hauts de Bruyères",
+                    "Le Bois aux Daims", "Les Bois-Francs", "Les Trois Forêts", "Les Landes de Gascogne",
+                    "Les Ardennes", "De Vossemeren", "Erperheide", "Park De Haan", "Terhills Resort",
+                    "Park Bostalsee", "Park Hochsauerland", "Park Allgäu", "Bispinger Heide",
+                    "Park Nordseeküste", "Park Eifel",
+                    "Port Zélande", "Het Heijderbos", "Park Zandvoort", "De Kempervennen",
+                    "De Huttenheugte", "De Eemhof", "Het Meerdal", "Parc Sandur", "Limburgse Peel",
+                    "Nordborg Resort"
+                ]
+                for park in park_names:
+                    if poi_name.endswith(park):
+                        poi_name = poi_name[:-len(park)].strip()
+                        break
+
                 # Récupérer les URLs d'image depuis plusieurs sources
                 src = img.get('src', '')
                 data_src = img.get('data-src', '')
@@ -153,8 +169,19 @@ class SurroundingsService:
                     'has_photos': not is_missing
                 })
 
+            # Dédupliquer par nom (garder la première occurrence)
+            seen_names = set()
+            unique_surroundings = []
+            for item in all_surroundings:
+                if item['name'] not in seen_names:
+                    seen_names.add(item['name'])
+                    unique_surroundings.append(item)
+
+            # Recalculer no_missing_photos après déduplication
+            no_missing_photos = all(s['has_photos'] for s in unique_surroundings) if unique_surroundings else True
+
             return {
-                'surroundings': all_surroundings,
+                'surroundings': unique_surroundings,
                 'no_missing_photos': no_missing_photos
             }
 

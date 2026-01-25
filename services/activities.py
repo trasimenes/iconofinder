@@ -120,6 +120,23 @@ class ActivityService:
                         title = type('Title', (), {'text': text_content})()
                 activity_name = title.text.strip() if title else "Activité sans nom"
 
+                # Nettoyer le nom : retirer le nom du parc s'il est à la fin
+                # Liste des noms de parcs connus
+                park_names = [
+                    "Villages Nature Paris", "Le Lac d'Ailette", "Les Hauts de Bruyères",
+                    "Le Bois aux Daims", "Les Bois-Francs", "Les Trois Forêts", "Les Landes de Gascogne",
+                    "Les Ardennes", "De Vossemeren", "Erperheide", "Park De Haan", "Terhills Resort",
+                    "Park Bostalsee", "Park Hochsauerland", "Park Allgäu", "Bispinger Heide",
+                    "Park Nordseeküste", "Park Eifel",
+                    "Port Zélande", "Het Heijderbos", "Park Zandvoort", "De Kempervennen",
+                    "De Huttenheugte", "De Eemhof", "Het Meerdal", "Parc Sandur", "Limburgse Peel",
+                    "Nordborg Resort"
+                ]
+                for park in park_names:
+                    if activity_name.endswith(park):
+                        activity_name = activity_name[:-len(park)].strip()
+                        break
+
                 # Récupérer les URLs d'image depuis plusieurs sources
                 src = img.get('src', '')
                 data_src = img.get('data-src', '')
@@ -176,8 +193,20 @@ class ActivityService:
                     'image_src': best_image,
                     'has_photos': not is_missing
                 })
+
+            # Dédupliquer par nom d'activité (garder la première occurrence)
+            seen_names = set()
+            unique_activities = []
+            for activity in all_activities:
+                if activity['name'] not in seen_names:
+                    seen_names.add(activity['name'])
+                    unique_activities.append(activity)
+
+            # Recalculer no_missing_photos après déduplication
+            no_missing_photos = all(a['has_photos'] for a in unique_activities) if unique_activities else True
+
             return {
-                'activities': all_activities,
+                'activities': unique_activities,
                 'no_missing_photos': no_missing_photos
             }
             
