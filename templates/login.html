@@ -154,36 +154,12 @@
             ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw center text first (behind rain)
-            const title = "ICONOFINDER";
-            const subtitle = "[ Trouvez les photos manquantes ]";
-
-            ctx.save();
-            ctx.font = "bold 48px 'Courier New', monospace";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            // Glow effect for title
-            ctx.shadowColor = "#0F0";
-            ctx.shadowBlur = 20;
-            ctx.fillStyle = "#0F0";
-            ctx.fillText(title, canvas.width / 2, canvas.height / 2);
-
-            // Subtitle
-            ctx.font = "16px 'Courier New', monospace";
-            ctx.shadowBlur = 10;
-            ctx.fillStyle = "rgba(0, 255, 0, 0.6)";
-            ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 40);
-            ctx.restore();
-
-            // Draw rain (on top)
+            // Draw rain
             ctx.fillStyle = "#0F0";
             ctx.font = `${fontSize}px monospace`;
 
             drops.forEach((y, x) => {
                 const text = charArray[Math.floor(Math.random() * charArray.length)];
-                // Vary opacity for depth effect
-                ctx.fillStyle = `rgba(0, 255, 0, ${0.3 + Math.random() * 0.7})`;
                 ctx.fillText(text, x * fontSize, y * fontSize);
 
                 if (y * fontSize > canvas.height || Math.random() > 0.975) {
