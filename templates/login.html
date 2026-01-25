@@ -69,7 +69,13 @@
                     </div>
                     {% endif %}
 
-                    <form id="formAuthentication" class="mb-3" action="/login" method="POST">
+                    <div class="d-flex justify-content-end mb-3">
+                        <a href="/login?lang=en" class="badge {{ 'bg-primary' if lang == 'en' else 'bg-secondary' }} me-1 text-decoration-none">EN</a>
+                        <a href="/login?lang=fr" class="badge {{ 'bg-primary' if lang == 'fr' else 'bg-secondary' }} text-decoration-none">FR</a>
+                    </div>
+
+                    <form id="formAuthentication" class="mb-3" action="/login?lang={{ lang }}" method="POST">
+                        <input type="hidden" name="lang" value="{{ lang }}">
                         <div class="mb-3">
                             <label for="username" class="form-label">{% if lang == 'fr' %}Utilisateur{% else %}Username{% endif %}</label>
                             <input

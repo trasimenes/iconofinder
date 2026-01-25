@@ -222,14 +222,14 @@ def login():
     if session.get('logged_in'):
         return redirect(url_for('home'))
 
-    # Detect browser language
-    accept_language = request.headers.get('Accept-Language', '')
-    lang = 'fr' if accept_language.lower().startswith('fr') else 'en'
+    # Language from query param or default to English
+    lang = request.args.get('lang', 'en')
 
     error = None
     if request.method == 'POST':
         username = request.form.get('username', '')
         password = request.form.get('password', '')
+        lang = request.form.get('lang', 'en')
 
         if username == AUTH_USERNAME and AUTH_PASSWORD_HASH and check_password_hash(AUTH_PASSWORD_HASH, password):
             session['logged_in'] = True
