@@ -7,7 +7,11 @@ import logging
 from functools import wraps
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
+from dotenv import load_dotenv
 from config.urls import PARKS_URLS
+
+# Load .env file
+load_dotenv()
 from services.activities import ActivityService
 from services.housing import HousingService
 from services.restaurants import RestaurantService
