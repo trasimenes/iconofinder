@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html
+  lang="fr"
+  class="light-style customizer-hide"
+  dir="ltr"
+  data-theme="theme-default"
+  data-assets-path="{{ url_for('static', filename='sneat/') }}"
+  data-template="vertical-menu-template-no-customizer"
+>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow">
+    <title>Login - IconoFinder</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='sneat/img/favicon/favicon.ico') }}" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='sneat/vendor/fonts/boxicons.css') }}" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='sneat/vendor/css/rtl/core.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='sneat/vendor/css/rtl/theme-default.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='sneat/css/demo.css') }}" />
+
+    <!-- Page CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='sneat/vendor/css/pages/page-auth.css') }}" />
+
+    <!-- Helpers -->
+    <script src="{{ url_for('static', filename='sneat/vendor/js/helpers.js') }}"></script>
+    <script src="{{ url_for('static', filename='sneat/js/config.js') }}"></script>
+</head>
+<body>
+    <div class="authentication-wrapper authentication-cover">
+        <div class="authentication-inner row m-0">
+            <!-- Left illustration -->
+            <div class="d-none d-lg-flex col-lg-7 col-xl-8 align-items-center p-5" style="background: linear-gradient(135deg, #696cff 0%, #8592ff 100%);">
+                <div class="w-100 d-flex flex-column justify-content-center align-items-center text-white">
+                    <img
+                        src="https://illustrations.popsy.co/white/detective.svg"
+                        class="img-fluid mb-4"
+                        alt="IconoFinder"
+                        style="max-width: 500px;"
+                    />
+                    <h2 class="text-white fw-bold mb-2">IconoFinder</h2>
+                    <p class="text-white-50 text-center" style="max-width: 400px;">
+                        Trouvez et corrigez les photos manquantes dans tous vos parcs
+                    </p>
+                </div>
+            </div>
+            <!-- /Left illustration -->
+
+            <!-- Login form -->
+            <div class="d-flex col-12 col-lg-5 col-xl-4 align-items-center authentication-bg p-sm-5 p-4">
+                <div class="w-px-400 mx-auto">
+                    <!-- Logo -->
+                    <div class="app-brand mb-5">
+                        <a href="/" class="app-brand-link gap-2">
+                            <span class="app-brand-logo demo">
+                                <img src="https://i.pinimg.com/originals/ed/35/f8/ed35f861be81be2548e514085fb19385.gif" alt="Logo" style="height:40px;">
+                            </span>
+                            <span class="app-brand-text demo text-body fw-bolder">IconoFinder</span>
+                        </a>
+                    </div>
+                    <!-- /Logo -->
+
+                    <h4 class="mb-2">Bienvenue !</h4>
+                    <p class="mb-4">Connectez-vous pour acceder au tableau de bord</p>
+
+                    {% if error %}
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="bx bx-error-circle me-2"></i>
+                        <div>{{ error }}</div>
+                    </div>
+                    {% endif %}
+
+                    <form id="formAuthentication" class="mb-3" action="/login" method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Utilisateur</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="username"
+                                name="username"
+                                placeholder="Entrez votre identifiant"
+                                autofocus
+                                required
+                            />
+                        </div>
+                        <div class="mb-3 form-password-toggle">
+                            <label class="form-label" for="password">Mot de passe</label>
+                            <div class="input-group input-group-merge">
+                                <input
+                                    type="password"
+                                    id="password"
+                                    class="form-control"
+                                    name="password"
+                                    placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                                    required
+                                />
+                                <span class="input-group-text cursor-pointer" onclick="togglePassword()">
+                                    <i class="bx bx-hide" id="toggleIcon"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary d-grid w-100" type="submit">
+                            Se connecter
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- /Login form -->
+        </div>
+    </div>
+
+    <!-- Core JS -->
+    <script src="{{ url_for('static', filename='sneat/vendor/libs/jquery/jquery.js') }}"></script>
+    <script src="{{ url_for('static', filename='sneat/vendor/libs/popper/popper.js') }}"></script>
+    <script src="{{ url_for('static', filename='sneat/vendor/js/bootstrap.js') }}"></script>
+    <script src="{{ url_for('static', filename='sneat/vendor/libs/perfect-scrollbar/perfect-scrollbar.js') }}"></script>
+    <script src="{{ url_for('static', filename='sneat/vendor/js/menu.js') }}"></script>
+    <script src="{{ url_for('static', filename='sneat/js/main.js') }}"></script>
+
+    <script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('bx-hide');
+            toggleIcon.classList.add('bx-show');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('bx-show');
+            toggleIcon.classList.add('bx-hide');
+        }
+    }
+    </script>
+</body>
+</html>

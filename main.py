@@ -4,7 +4,9 @@ import threading
 import time
 import datetime
 import logging
+from functools import wraps
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from werkzeug.security import check_password_hash, generate_password_hash
 from config.urls import PARKS_URLS
 from services.activities import ActivityService
 from services.housing import HousingService
@@ -26,7 +28,21 @@ werkzeug_logger = logging.getLogger('werkzeug')
 werkzeug_logger.addFilter(TLSErrorFilter())
 
 app = Flask(__name__)
-app.secret_key = "/Xfn,MN~s}.;q1M1'Om`YD;x_-<ACZ"
+app.secret_key = os.environ.get('SECRET_KEY', "/Xfn,MN~s}.;q1M1'Om`YD;x_-<ACZ")
+
+# Credentials from environment variables
+AUTH_USERNAME = os.environ.get('AUTH_USERNAME', 'admin')
+AUTH_PASSWORD_HASH = os.environ.get('AUTH_PASSWORD_HASH', '')
+
+
+def login_required(f):
+    """Decorator to protect routes - requires login"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Gestionnaire d'erreur pour les tentatives HTTPS sur HTTP
 @app.errorhandler(400)
@@ -196,7 +212,37 @@ def before_request():
 def robots():
     return app.send_static_file('robots.txt')
 
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if session.get('logged_in'):
+        return redirect(url_for('home'))
+
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+
+        if username == AUTH_USERNAME and AUTH_PASSWORD_HASH and check_password_hash(AUTH_PASSWORD_HASH, password):
+            session['logged_in'] = True
+            session['username'] = username
+            next_url = request.args.get('next', url_for('home'))
+            return redirect(next_url)
+        else:
+            error = "Identifiants incorrects"
+
+    return render_template('login.html', error=error)
+
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    session.pop('username', None)
+    return redirect(url_for('login'))
+
+
 @app.route('/')
+@login_required
 def home():
     countries = ['Tous'] + sorted(list(PARKS_URLS.keys()))  # Ajoute "Tous" et trie les pays
     # Récupérer le type pré-sélectionné depuis l'URL (optionnel)
@@ -204,6 +250,7 @@ def home():
     return render_template('index.html', countries=countries, translate=get_translation, preselected_type=preselected_type)
 
 @app.route('/set_language/<lang>')
+@login_required
 def set_language(lang):
     if lang not in ['fr', 'en']:
         return jsonify({'success': False, 'error': 'Invalid language'})
@@ -221,6 +268,7 @@ def set_language(lang):
     return redirect(next_url)
 
 @app.route('/api/parks')
+@login_required
 def get_parks():
     country = request.args.get('country')
     if not country:
@@ -240,6 +288,7 @@ def get_parks():
     return jsonify({'parks': parks})
 
 @app.route('/api/parks_list')
+@login_required
 def get_parks_list():
     """Retourne la liste des parcs pour un pays donné (pour le chargement progressif)"""
     country = request.args.get('country')
@@ -250,6 +299,7 @@ def get_parks_list():
     return jsonify({'country': country, 'parks': parks})
 
 @app.route('/api/search_park')
+@login_required
 def search_single_park():
     """Recherche un seul parc (pour le chargement progressif)"""
     country = request.args.get('country')
@@ -297,10 +347,12 @@ def search_single_park():
         return jsonify({'error': str(e), 'country': country, 'park': park})
 
 @app.route('/recherche')
+@login_required
 def recherche():
     return render_template('search.html', parcs=PARKS_URLS, t=get_translation)
 
 @app.route('/api/search')
+@login_required
 def api_search():
     logs = []
     country = request.args.get('country')
@@ -325,6 +377,7 @@ def api_search():
         return jsonify({'error': str(e), 'logs': logs})
 
 @app.route('/results')
+@login_required
 def results():
     country = request.args.get('country')
     parc = request.args.get('parc')
@@ -349,6 +402,7 @@ def results():
                         translate=get_translation)
 
 @app.route('/results_from_snapshot')
+@login_required
 def results_from_snapshot():
     country = request.args.get('country')
     parc = request.args.get('parc')
@@ -381,6 +435,7 @@ def results_from_snapshot():
     return render_template('results.html', countries=countries, type=search_type, parc=parc, results=filtered, translate=get_translation, snapshot_date=snapshot_date)
 
 @app.route('/api/snapshot_results')
+@login_required
 def api_snapshot_results():
     country = request.args.get('country')
     parc = request.args.get('parc')
@@ -430,6 +485,7 @@ def utility_processor():
     return dict(translate=get_translation)
 
 @app.route('/stats')
+@login_required
 def stats_view():
     snapshots = load_snapshots()
     if not snapshots:
@@ -453,6 +509,7 @@ def stats_view():
     return render_template('stats.html', stats=stats_data, translate=get_translation, refreshed_at=refreshed_at)
 
 @app.route('/stats/refresh')
+@login_required
 def refresh_stats():
     snapshots = load_snapshots()
     new_id = 1 + max([s.get('id', 0) for s in snapshots], default=0)
@@ -474,11 +531,13 @@ def refresh_stats():
     return redirect(url_for('stats_view', refreshed=new_snapshot['created_at']))
 
 @app.route('/snapshots', methods=['GET'])
+@login_required
 def snapshot_manager():
     snapshots = load_snapshots()
     return render_template('snapshots.html', snapshots=snapshots)
 
 @app.route('/snapshots/create', methods=['POST'])
+@login_required
 def create_snapshot():
     snapshots = load_snapshots()
     new_id = 1 + max([s.get('id', 0) for s in snapshots], default=0)
@@ -501,6 +560,7 @@ def create_snapshot():
     return redirect(url_for('snapshot_manager', status='success'))
 
 @app.route('/snapshots/delete/<int:snap_id>', methods=['GET'])
+@login_required
 def delete_snapshot(snap_id):
     snapshots = load_snapshots()
     snapshots = [s for s in snapshots if s.get('id') != snap_id]
@@ -508,6 +568,7 @@ def delete_snapshot(snap_id):
     return redirect(url_for('snapshot_manager'))
 
 @app.route('/snapshots/view/<int:snap_id>', methods=['GET'])
+@login_required
 def view_snapshot(snap_id):
     snapshots = load_snapshots()
     snap = next((s for s in snapshots if s.get('id') == snap_id), None)
@@ -516,6 +577,7 @@ def view_snapshot(snap_id):
     return render_template('snapshots_detail.html', snapshot=snap)
 
 @app.route('/snapshots/create_async')
+@login_required
 def create_snapshot_async():
     # Démarre le thread de création si pas déjà en cours
     if not os.path.exists(PROGRESS_FILE):
@@ -524,6 +586,7 @@ def create_snapshot_async():
     return render_template('snapshots_creating.html')
 
 @app.route('/snapshots/progress')
+@login_required
 def snapshot_progress():
     try:
         if not os.path.exists(PROGRESS_FILE):
@@ -610,6 +673,7 @@ def run_snapshot_creation():
         os.remove(PROGRESS_FILE)
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
     snapshots = load_snapshots()
     if not snapshots:
