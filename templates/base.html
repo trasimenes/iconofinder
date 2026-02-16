@@ -127,6 +127,13 @@
                             <div>{{ translate('menu_dashboard') }}</div>
                         </a>
                     </li>
+
+                    <li class="menu-item {% if request.endpoint == 'reports' %}active{% endif %}">
+                        <a href="/reports" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-file"></i>
+                            <div>{{ translate('menu_reports') }}</div>
+                        </a>
+                    </li>
                 </ul>
             </aside>
             <!-- / Menu -->

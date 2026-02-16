@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}{{ translate('menu_reports') }} - IconoFinder{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold py-3 mb-4">
+    <span class="text-muted fw-light">IconoFinder /</span> {{ translate('menu_reports') }}
+</h4>
+
+<!-- Generate Report Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title m-0">{{ translate('reports_title') }}</h5>
+    </div>
+    <div class="card-body">
+        {% if last_snapshot_date %}
+        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-info-circle me-2 fs-5"></i>
+            <span>{{ translate('reports_based_on') }} <strong>{{ last_snapshot_date }}</strong></span>
+        </div>
+
+        <div class="row mb-4">
+            <!-- Country Select -->
+            <div class="col-md-6 mb-3 mb-md-0">
+                <label for="countrySelect" class="form-label fw-semibold">{{ translate('reports_select_country') }}</label>
+                <select id="countrySelect" class="form-select">
+                    <option value="all">{{ translate('reports_all_countries') }}</option>
+                    {% for country in countries %}
+                    <option value="{{ country }}">{{ country }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Include Checkboxes -->
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">{{ translate('reports_include') }}</label>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input include-check" type="checkbox" value="activities" id="includeActivities" checked>
+                        <label class="form-check-label" for="includeActivities">
+                            <i class="bx bx-cycling text-primary me-1"></i>{{ translate('menu_activities') }}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input include-check" type="checkbox" value="housings" id="includeHousings" checked>
+                        <label class="form-check-label" for="includeHousings">
+                            <i class="bx bx-building-house text-primary me-1"></i>{{ translate('menu_accommodations') }}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input include-check" type="checkbox" value="restaurants" id="includeRestaurants" checked>
+                        <label class="form-check-label" for="includeRestaurants">
+                            <i class="bx bx-restaurant text-primary me-1"></i>{{ translate('menu_restaurants') }}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input include-check" type="checkbox" value="surroundings" id="includeSurroundings" checked>
+                        <label class="form-check-label" for="includeSurroundings">
+                            <i class="bx bx-map text-primary me-1"></i>{{ translate('menu_surroundings') }}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeAll" checked>
+                        <label class="form-check-label fw-semibold" for="includeAll">
+                            {{ translate('reports_all') }}
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button id="downloadBtn" class="btn btn-primary" onclick="downloadReport()">
+            <i class="bx bx-download me-1"></i>
+            <span id="btnText">{{ translate('reports_download') }}</span>
+            <span id="btnSpinner" class="spinner-border spinner-border-sm ms-1 d-none" role="status"></span>
+        </button>
+
+        <!-- Progress + logs zone (hidden by default) -->
+        <div id="progressZone" class="mt-3 d-none">
+            <div class="progress mb-2" style="height: 6px;">
+                <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div id="logBox" class="bg-dark text-success font-monospace p-3 rounded" style="max-height: 220px; overflow-y: auto; font-size: 0.75rem; line-height: 1.4;"></div>
+        </div>
+
+        {% else %}
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="bx bx-error-circle me-2 fs-5"></i>
+            <span>{{ translate('reports_no_snapshot') }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Report History Card -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title m-0">{{ translate('reports_history') }}</h5>
+    </div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>{{ translate('reports_filename') }}</th>
+                    <th>{{ translate('date') }}</th>
+                    <th>{{ translate('reports_size') }}</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                {% for report in report_history %}
+                <tr>
+                    <td>
+                        <i class="bx bxs-file-pdf text-danger me-2"></i>
+                        <strong>{{ report.filename }}</strong>
+                    </td>
+                    <td>
+                        <i class="bx bx-calendar me-1 text-muted"></i>
+                        {{ report.created_at }}
+                    </td>
+                    <td>{{ report.size }}</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="/reports/history/{{ report.filename }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bx bx-download"></i>
+                            </a>
+                            <a href="/reports/delete/{{ report.filename }}" class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Delete this report?')">
+                                <i class="bx bx-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        <i class="bx bx-inbox fs-1 d-block mb-2"></i>
+                        {{ translate('reports_no_history') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// "All" checkbox logic
+const allCheck = document.getElementById('includeAll');
+const categoryChecks = document.querySelectorAll('.include-check');
+
+if (allCheck) {
+    allCheck.addEventListener('change', function() {
+        categoryChecks.forEach(cb => { cb.checked = this.checked; });
+    });
+
+    categoryChecks.forEach(cb => {
+        cb.addEventListener('change', function() {
+            allCheck.checked = [...categoryChecks].every(c => c.checked);
+        });
+    });
+}
+
+function downloadReport() {
+    const country = document.getElementById('countrySelect').value;
+    const btn = document.getElementById('downloadBtn');
+    const btnText = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+
+    // Gather selected categories
+    const selected = [...document.querySelectorAll('.include-check:checked')].map(cb => cb.value);
+    if (selected.length === 0) {
+        alert('{{ translate("reports_select_at_least_one") }}');
+        return;
+    }
+
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Creating snapshot...';
+
+    // Show progress zone
+    const progressZone = document.getElementById('progressZone');
+    const logBox = document.getElementById('logBox');
+    const progressBar = document.getElementById('progressBar');
+    progressZone.classList.remove('d-none');
+    logBox.innerHTML = '';
+
+    // Step 1: Start async snapshot creation
+    fetch('/snapshots/create_async')
+        .then(() => pollSnapshotProgress(country, selected))
+        .catch(err => {
+            alert(err.message);
+            resetBtn();
+        });
+}
+
+let lastLogCount = 0;
+
+function pollSnapshotProgress(country, selected) {
+    const btnText = document.getElementById('btnText');
+    const logBox = document.getElementById('logBox');
+    const progressBar = document.getElementById('progressBar');
+
+    lastLogCount = 0;
+
+    const poll = setInterval(() => {
+        fetch('/snapshots/progress')
+            .then(r => r.json())
+            .then(data => {
+                // Show progress
+                const pct = Math.round((
+                    (data.activities || 0) +
+                    (data.housings || 0) +
+                    (data.restaurants || 0) +
+                    (data.surroundings || 0)
+                ) / 4);
+                btnText.textContent = `${data.status || 'Scanning...'} ${pct}%`;
+                progressBar.style.width = `${pct}%`;
+
+                // Append new logs
+                const logs = data.logs || [];
+                if (logs.length > lastLogCount) {
+                    for (let i = lastLogCount; i < logs.length; i++) {
+                        const line = document.createElement('div');
+                        line.textContent = logs[i];
+                        logBox.appendChild(line);
+                    }
+                    lastLogCount = logs.length;
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
+
+                if (data.done) {
+                    clearInterval(poll);
+                    btnText.textContent = 'Generating PDF...';
+                    progressBar.style.width = '100%';
+                    const doneLine = document.createElement('div');
+                    doneLine.textContent = '>> Generating PDF report...';
+                    doneLine.style.color = '#ffc107';
+                    logBox.appendChild(doneLine);
+                    logBox.scrollTop = logBox.scrollHeight;
+                    fetchPdf(country, selected);
+                }
+            })
+            .catch(() => {
+                clearInterval(poll);
+                alert('Error checking snapshot progress');
+                resetBtn();
+            });
+    }, 1500);
+}
+
+function fetchPdf(country, selected) {
+    const params = new URLSearchParams();
+    params.set('country', country);
+    selected.forEach(s => params.append('include', s));
+
+    fetch(`/reports/download?${params.toString()}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Error generating report');
+            return response.blob();
+        })
+        .then(blob => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            const disposition = country === 'all' ? 'report_global' : `report_${country}`;
+            a.download = `${disposition}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(a.href);
+            setTimeout(() => location.reload(), 500);
+        })
+        .catch(err => {
+            alert(err.message);
+        })
+        .finally(() => {
+            resetBtn();
+        });
+}
+
+function resetBtn() {
+    const btn = document.getElementById('downloadBtn');
+    const btnText = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    btn.disabled = false;
+    spinner.classList.add('d-none');
+    btnText.textContent = '{{ translate("reports_download") }}';
+}
+
+function hideProgress() {
+    document.getElementById('progressZone').classList.add('d-none');
+}
+</script>
+{% endblock %}

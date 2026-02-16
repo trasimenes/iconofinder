@@ -24,3 +24,15 @@ map.html
 
 # Services de booking (non fonctionnels, contiennent URLs sensibles)
 services/booking_*.py
+
+# Script de déploiement (contient identifiants SSH)
+deploy.sh
+
+# Generated PDF reports
+generated_reports/
+
+# Cached park cover images
+park_covers/
+
+# Snapshot progress
+snapshot_progress.json

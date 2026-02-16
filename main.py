@@ -5,7 +5,7 @@ import time
 import datetime
 import logging
 from functools import wraps
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
 from werkzeug.security import check_password_hash, generate_password_hash
 from dotenv import load_dotenv
 from config.urls import PARKS_URLS
@@ -18,6 +18,7 @@ from services.restaurants import RestaurantService
 from services.surroundings import SurroundingsService
 from utils.translations import load_translations, get_translation, translations
 from utils.stats import compute_stats
+from services.pdf_report import generate_country_report, generate_global_report, list_reports
 
 # Configuration du logging pour filtrer les erreurs TLS/SSL
 class TLSErrorFilter(logging.Filter):
@@ -524,6 +525,7 @@ def refresh_stats():
     activities = search_activities('Tous', 'Tous')
     housings = search_housings('Tous', 'Tous')
     restaurants = search_restaurants('Tous', 'Tous')
+    surroundings = search_surroundings('Tous', 'Tous')
     new_snapshot = {
         'id': new_id,
         'name': f'Snapshot {new_id}',
@@ -531,7 +533,8 @@ def refresh_stats():
         'data': {
             'activities': activities,
             'housings': housings,
-            'restaurants': restaurants
+            'restaurants': restaurants,
+            'surroundings': surroundings
         },
     }
     snapshots.append(new_snapshot)
@@ -553,6 +556,7 @@ def create_snapshot():
     activities = search_activities('Tous', 'Tous')
     housings = search_housings('Tous', 'Tous')
     restaurants = search_restaurants('Tous', 'Tous')
+    surroundings = search_surroundings('Tous', 'Tous')
     new_snapshot = {
         'id': new_id,
         'name': f'Snapshot {new_id}',
@@ -560,7 +564,8 @@ def create_snapshot():
         'data': {
             'activities': activities,
             'housings': housings,
-            'restaurants': restaurants
+            'restaurants': restaurants,
+            'surroundings': surroundings
         },
     }
     snapshots.append(new_snapshot)
@@ -652,6 +657,20 @@ def run_snapshot_creation():
         progress["restaurants"] = int((i+1)/total*100)
         with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
             json.dump(progress, f)
+    # 4. Surroundings
+    progress["surroundings"] = 0
+    progress["status"] = "Recherche des alentours…"
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f)
+    surroundings = {}
+    for i, (country, park) in enumerate(all_parks):
+        log(f"[ALENTOURS] {country} - {park}")
+        surroundings_url = PARKS_URLS[country][park].get("surroundings")
+        if surroundings_url:
+            surroundings.setdefault(country, {})[park] = surroundings_service.get_surroundings_with_placeholders(surroundings_url)
+        progress["surroundings"] = int((i+1)/total*100)
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(progress, f)
     # Finalisation
     log("Fin de la création du snapshot")
     progress["status"] = "Sauvegarde du snapshot…"
@@ -667,7 +686,8 @@ def run_snapshot_creation():
         'data': {
             'activities': activities,
             'housings': housings,
-            'restaurants': restaurants
+            'restaurants': restaurants,
+            'surroundings': surroundings
         },
     }
     snapshots.append(new_snapshot)
@@ -775,6 +795,80 @@ def dashboard():
         last_snapshot_date=snapshots[-1].get('created_at', 'Non disponible'),
         translations=load_translations()
     )
+
+REPORTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'generated_reports')
+
+@app.route('/reports')
+@login_required
+def reports():
+    snapshots = load_snapshots()
+    last_snapshot_date = None
+    if snapshots:
+        last_snapshot_date = snapshots[-1].get('created_at', None)
+    countries = sorted(list(PARKS_URLS.keys()))
+    report_history = list_reports(REPORTS_DIR)
+    return render_template('reports.html', countries=countries,
+                           last_snapshot_date=last_snapshot_date,
+                           report_history=report_history,
+                           translate=get_translation)
+
+@app.route('/reports/download')
+@login_required
+def download_report():
+    country = request.args.get('country', 'all')
+    include_params = request.args.getlist('include')
+    if not include_params:
+        include = {'activities', 'housings', 'restaurants', 'surroundings'}
+    else:
+        include = set(include_params)
+
+    snapshots = load_snapshots()
+    if not snapshots:
+        return jsonify({'error': 'No snapshot available'}), 404
+
+    snapshot_data = snapshots[-1]['data']
+
+    if country == 'all':
+        filepath = generate_global_report(snapshot_data, REPORTS_DIR, include)
+    else:
+        filepath = generate_country_report(country, snapshot_data, REPORTS_DIR, include)
+
+    return send_file(filepath, as_attachment=True,
+                     download_name=os.path.basename(filepath),
+                     mimetype='application/pdf')
+
+@app.route('/reports/from_snapshot/<int:snap_id>')
+@login_required
+def report_from_snapshot(snap_id):
+    snapshots = load_snapshots()
+    snap = next((s for s in snapshots if s.get('id') == snap_id), None)
+    if not snap:
+        return redirect(url_for('snapshot_manager'))
+
+    snapshot_data = snap['data']
+    filepath = generate_global_report(snapshot_data, REPORTS_DIR)
+
+    return send_file(filepath, as_attachment=True,
+                     download_name=os.path.basename(filepath),
+                     mimetype='application/pdf')
+
+@app.route('/reports/history/<filename>')
+@login_required
+def download_report_history(filename):
+    filepath = os.path.join(REPORTS_DIR, filename)
+    if not os.path.exists(filepath) or not filename.endswith('.pdf'):
+        return redirect(url_for('reports'))
+    return send_file(filepath, as_attachment=True,
+                     download_name=filename,
+                     mimetype='application/pdf')
+
+@app.route('/reports/delete/<filename>')
+@login_required
+def delete_report(filename):
+    filepath = os.path.join(REPORTS_DIR, filename)
+    if os.path.exists(filepath) and filename.endswith('.pdf'):
+        os.remove(filepath)
+    return redirect(url_for('reports'))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

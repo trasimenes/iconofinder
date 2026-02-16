@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@font-face {
+    font-family: 'Bagoss';
+    src: url('{{ fonts_dir }}/BagossStandard-Regular.ttf') format('truetype');
+    font-weight: 400;
+}
+@font-face {
+    font-family: 'Bagoss';
+    src: url('{{ fonts_dir }}/BagossStandard-Medium.ttf') format('truetype');
+    font-weight: 600;
+}
+
+@page {
+    size: A4 landscape;
+    margin: 0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Bagoss', 'Inter', -apple-system, sans-serif;
+    font-weight: 400;
+    color: #1a1a2e;
+    background: #f0f1f6;
+    font-size: 10pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* ─── PAGE LAYOUT ─── */
+.page {
+    width: 297mm;
+    height: 210mm;
+    padding: 16mm 20mm;
+    page-break-after: always;
+    position: relative;
+    background: #f0f1f6;
+    overflow: hidden;
+}
+.page:last-child { page-break-after: avoid; }
+
+/* ─── HEADER BAR (on every page) ─── */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e1ea;
+}
+.page-header h1 {
+    font-weight: 600;
+    font-size: 16pt;
+    color: #696cff;
+    letter-spacing: -0.3px;
+}
+.page-header .meta {
+    font-size: 9pt;
+    color: #8c8c9e;
+}
+
+/* ─── DASHBOARD PAGE (page 1) ─── */
+.kpi-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.kpi-card {
+    flex: 1;
+    background: rgba(255,255,255,0.65);
+    border-radius: 12px;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card .kpi-label {
+    font-size: 8.5pt;
+    color: #8c8c9e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.kpi-card .kpi-value {
+    font-weight: 600;
+    font-size: 22pt;
+    color: #1a1a2e;
+    line-height: 1.1;
+}
+.kpi-card .kpi-sub {
+    font-size: 8pt;
+    color: #8c8c9e;
+    margin-top: 4px;
+}
+.kpi-card.accent-blue { border-left: 4px solid #696cff; }
+.kpi-card.accent-orange { border-left: 4px solid #ff9f43; }
+.kpi-card.accent-green { border-left: 4px solid #28c76f; }
+.kpi-card.accent-pink { border-left: 4px solid #e83e8c; }
+.kpi-card.accent-red { border-left: 4px solid #ea5455; }
+
+/* ─── CHARTS SECTION ─── */
+.charts-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.chart-card {
+    background: rgba(255,255,255,0.65);
+    border-radius: 12px;
+    padding: 16px 20px;
+    flex: 1;
+}
+.chart-card h3 {
+    font-weight: 600;
+    font-size: 10pt;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+}
+
+/* Bar chart */
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.bar-label {
+    width: 100px;
+    font-size: 8.5pt;
+    color: #5a5a72;
+    text-align: right;
+    flex-shrink: 0;
+}
+.bar-track {
+    flex: 1;
+    height: 18px;
+    background: #e8e9f2;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s;
+}
+.bar-fill.activities { background: linear-gradient(90deg, #696cff, #8b8eff); }
+.bar-fill.housings { background: linear-gradient(90deg, #ff9f43, #ffb976); }
+.bar-fill.restaurants { background: linear-gradient(90deg, #28c76f, #55d98d); }
+.bar-fill.surroundings { background: linear-gradient(90deg, #e83e8c, #f06bab); }
+.bar-value {
+    font-size: 8pt;
+    font-weight: 600;
+    color: #5a5a72;
+    width: 35px;
+    text-align: right;
+    flex-shrink: 0;
+}
+.bar-legend {
+    gap: 8px;
+    margin-bottom: 2px;
+}
+.bar-track-legend {
+    flex: 1;
+    font-size: 7pt;
+    color: #8c8c9e;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.bar-track-legend .ico {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+/* Donut / category breakdown */
+.category-pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.cat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(240,241,246,0.7);
+    border-radius: 8px;
+    padding: 8px 12px;
+    flex: 1;
+    min-width: 100px;
+}
+.cat-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.cat-dot.act { background: #696cff; }
+.cat-dot.hou { background: #ff9f43; }
+.cat-dot.res { background: #28c76f; }
+.cat-dot.sur { background: #e83e8c; }
+.cat-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.cat-info .cat-name { font-size: 8pt; color: #8c8c9e; }
+.cat-info .cat-val { font-weight: 600; font-size: 11pt; color: #1a1a2e; }
+
+/* ─── COUNTRY PAGE ─── */
+.country-title {
+    font-weight: 600;
+    font-size: 18pt;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+}
+.country-subtitle {
+    font-size: 9pt;
+    color: #8c8c9e;
+    margin-bottom: 14px;
+}
+
+.parks-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.park-card {
+    background: rgba(255,255,255,0.65);
+    border-radius: 12px;
+    overflow: hidden;
+    width: calc(50% - 6px);
+    display: flex;
+    flex-direction: column;
+}
+.park-card.full-width {
+    width: 100%;
+}
+.park-cover {
+    width: 100%;
+    height: 55px;
+    object-fit: cover;
+    object-position: center 30%;
+    display: block;
+}
+.park-body {
+    padding: 10px 14px;
+    flex: 1;
+}
+.park-name {
+    font-weight: 600;
+    font-size: 10.5pt;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+}
+.park-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+.park-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 8pt;
+}
+.park-stat .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+.park-stat .dot.act { background: #696cff; }
+.park-stat .dot.hou { background: #ff9f43; }
+.park-stat .dot.res { background: #28c76f; }
+.park-stat .dot.sur { background: #e83e8c; }
+.park-stat .val { font-weight: 600; color: #1a1a2e; }
+.park-stat .lbl { color: #8c8c9e; }
+
+.park-stat.ok .val { color: #28c76f; }
+.park-stat.missing .val { color: #ea5455; }
+
+/* ─── DETAIL TABLES ─── */
+.detail-section {
+    margin-top: 8px;
+}
+.detail-cat {
+    font-weight: 600;
+    font-size: 8.5pt;
+    color: #696cff;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+    padding-left: 2px;
+}
+.detail-cat.sur-cat { color: #e83e8c; }
+.detail-list {
+    font-size: 8pt;
+    color: #5a5a72;
+    line-height: 1.5;
+    padding-left: 2px;
+}
+.detail-list span {
+    display: inline;
+}
+.detail-list .sep {
+    color: #d0d0dd;
+    margin: 0 3px;
+}
+.detail-ok {
+    font-size: 8pt;
+    color: #28c76f;
+    font-weight: 600;
+}
+
+/* ─── SUMMARY TABLE ─── */
+.summary-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(255,255,255,0.65);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 8.5pt;
+}
+.summary-table th {
+    background: rgba(240,241,246,0.7);
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    color: #5a5a72;
+    border-bottom: 1px solid #e0e1ea;
+}
+.summary-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #ededf4;
+    color: #1a1a2e;
+}
+.summary-table tr:last-child td { border-bottom: none; }
+.summary-table .total-row td {
+    font-weight: 600;
+    background: rgba(105,108,255,0.06);
+    border-top: 2px solid #696cff;
+}
+.text-red { color: #ea5455; font-weight: 600; }
+.text-green { color: #28c76f; font-weight: 600; }
+
+/* ─── FOOTER ─── */
+.page-footer {
+    position: absolute;
+    bottom: 10mm;
+    left: 20mm;
+    right: 20mm;
+    display: flex;
+    justify-content: flex-end;
+    font-size: 7.5pt;
+    color: #b0b0be;
+}
+.page-footer span + span { margin-left: 20px; }
+
+/* ─── COUNTRY DETAIL TABLE ─── */
+.country-detail-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(255,255,255,0.65);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 8pt;
+}
+.country-detail-table th {
+    background: #696cff;
+    color: #fff;
+    font-weight: 600;
+    padding: 7px 10px;
+    text-align: left;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.country-detail-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #ededf4;
+    vertical-align: top;
+}
+.country-detail-table tr:nth-child(even) td { background: rgba(240,241,246,0.4); }
+.country-detail-table tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ PAGE 1: DASHBOARD ═══════════ -->
+<div class="page">
+    <div class="page-header">
+        <h1>Missing Photos Report</h1>
+        <div class="meta">{{ report_title }} &middot; {{ date_str }}</div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+        <div class="kpi-card accent-blue">
+            <div class="kpi-label">Activities</div>
+            <div class="kpi-value">{{ grand_totals.activities }}</div>
+            <div class="kpi-sub">missing photos</div>
+        </div>
+        <div class="kpi-card accent-orange">
+            <div class="kpi-label">Accommodations</div>
+            <div class="kpi-value">{{ grand_totals.housings }}</div>
+            <div class="kpi-sub">missing photos</div>
+        </div>
+        <div class="kpi-card accent-green">
+            <div class="kpi-label">Restaurants</div>
+            <div class="kpi-value">{{ grand_totals.restaurants }}</div>
+            <div class="kpi-sub">missing photos</div>
+        </div>
+        <div class="kpi-card accent-pink">
+            <div class="kpi-label">Surroundings</div>
+            <div class="kpi-value">{{ grand_totals.surroundings }}</div>
+            <div class="kpi-sub">missing photos</div>
+        </div>
+        <div class="kpi-card accent-red">
+            <div class="kpi-label">Total</div>
+            <div class="kpi-value">{{ grand_totals.activities + grand_totals.housings + grand_totals.restaurants + grand_totals.surroundings }}</div>
+            <div class="kpi-sub">across {{ countries|length }} countries</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+        <!-- Bar chart: per country -->
+        <div class="chart-card" style="flex: 2;">
+            <h3>Missing photos by country</h3>
+            <div class="bar-chart">
+                <div class="bar-row bar-legend">
+                    <div class="bar-label"></div>
+                    <div class="bar-track-legend"><svg class="ico" viewBox="0 0 24 24" fill="#696cff"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.5 5v8h2v-4h2v4h2V10.5l3 1.5.7-1.4L14 8c-.8-.8-2-1-3 0L7.7 10.6l.7 1.4 1.6-.8z"/></svg> Act.</div>
+                    <div class="bar-track-legend"><svg class="ico" viewBox="0 0 24 24" fill="#ff9f43"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg> Acc.</div>
+                    <div class="bar-track-legend"><svg class="ico" viewBox="0 0 24 24" fill="#28c76f"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg> Rest.</div>
+                    <div class="bar-track-legend"><svg class="ico" viewBox="0 0 24 24" fill="#e83e8c"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg> Surr.</div>
+                    <div class="bar-value"></div>
+                </div>
+                {% for c in countries %}
+                <div class="bar-row">
+                    <div class="bar-label">{{ c.name }}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill activities" style="width: {{ (c.totals.activities / max_total * 100) if max_total > 0 else 0 }}%; display: inline-block; vertical-align: top;"></div>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill housings" style="width: {{ (c.totals.housings / max_total * 100) if max_total > 0 else 0 }}%;"></div>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill restaurants" style="width: {{ (c.totals.restaurants / max_total * 100) if max_total > 0 else 0 }}%;"></div>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill surroundings" style="width: {{ (c.totals.surroundings / max_total * 100) if max_total > 0 else 0 }}%;"></div>
+                    </div>
+                    <div class="bar-value">{{ c.totals.activities + c.totals.housings + c.totals.restaurants + c.totals.surroundings }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="chart-card" style="flex: 1;">
+            <h3>Breakdown by category</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
+                <div class="cat-pill">
+                    <svg class="cat-ico" viewBox="0 0 24 24" fill="#696cff"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.5 5v8h2v-4h2v4h2V10.5l3 1.5.7-1.4L14 8c-.8-.8-2-1-3 0L7.7 10.6l.7 1.4 1.6-.8z"/></svg>
+                    <div class="cat-info">
+                        <div class="cat-name">Activities</div>
+                        <div class="cat-val">{{ grand_totals.activities }}</div>
+                    </div>
+                </div>
+                <div class="cat-pill">
+                    <svg class="cat-ico" viewBox="0 0 24 24" fill="#ff9f43"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                    <div class="cat-info">
+                        <div class="cat-name">Accommodations</div>
+                        <div class="cat-val">{{ grand_totals.housings }}</div>
+                    </div>
+                </div>
+                <div class="cat-pill">
+                    <svg class="cat-ico" viewBox="0 0 24 24" fill="#28c76f"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>
+                    <div class="cat-info">
+                        <div class="cat-name">Restaurants</div>
+                        <div class="cat-val">{{ grand_totals.restaurants }}</div>
+                    </div>
+                </div>
+                <div class="cat-pill">
+                    <svg class="cat-ico" viewBox="0 0 24 24" fill="#e83e8c"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/></svg>
+                    <div class="cat-info">
+                        <div class="cat-name">Surroundings</div>
+                        <div class="cat-val">{{ grand_totals.surroundings }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary table -->
+    <table class="summary-table">
+        <thead>
+            <tr>
+                <th>Country</th>
+                <th>Parks</th>
+                <th>Activities</th>
+                <th>Accommodations</th>
+                <th>Restaurants</th>
+                <th>Surroundings</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in countries %}
+            <tr>
+                <td>{{ c.name }}</td>
+                <td>{{ c.parks|length }}</td>
+                <td class="{{ 'text-red' if c.totals.activities > 0 else 'text-green' }}">{{ c.totals.activities }}</td>
+                <td class="{{ 'text-red' if c.totals.housings > 0 else 'text-green' }}">{{ c.totals.housings }}</td>
+                <td class="{{ 'text-red' if c.totals.restaurants > 0 else 'text-green' }}">{{ c.totals.restaurants }}</td>
+                <td class="{{ 'text-red' if c.totals.surroundings > 0 else 'text-green' }}">{{ c.totals.surroundings }}</td>
+                <td class="{{ 'text-red' if (c.totals.activities + c.totals.housings + c.totals.restaurants + c.totals.surroundings) > 0 else 'text-green' }}">{{ c.totals.activities + c.totals.housings + c.totals.restaurants + c.totals.surroundings }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td>Total</td>
+                <td>{{ total_parks }}</td>
+                <td>{{ grand_totals.activities }}</td>
+                <td>{{ grand_totals.housings }}</td>
+                <td>{{ grand_totals.restaurants }}</td>
+                <td>{{ grand_totals.surroundings }}</td>
+                <td>{{ grand_totals.activities + grand_totals.housings + grand_totals.restaurants + grand_totals.surroundings }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <span>IconoFinder &mdash; Missing Photos Report</span>
+        <span>Page 1</span>
+    </div>
+</div>
+
+<!-- ═══════════ PAGES 2+: ONE PER COUNTRY ═══════════ -->
+{% for c in countries %}
+<div class="page">
+    <div class="page-header">
+        <h1>{{ c.name }}</h1>
+        <div class="meta">{{ c.parks|length }} parks &middot; {{ c.totals.activities + c.totals.housings + c.totals.restaurants + c.totals.surroundings }} missing photos</div>
+    </div>
+
+    {% set ns = namespace(has_overflow=false) %}
+    <div class="parks-grid">
+        {% for park in c.parks %}
+        <div class="park-card{% if c.parks|length == 1 %} full-width{% endif %}">
+            {% if park.cover %}
+            <img class="park-cover" src="{{ park.cover }}" alt="{{ park.name }}">
+            {% endif %}
+            <div class="park-body">
+                <div class="park-name">{{ park.name }}</div>
+                <div class="park-stats">
+                    <div class="park-stat {{ 'missing' if park.missing.activities|length > 0 else 'ok' }}">
+                        <div class="dot act"></div>
+                        <span class="val">{{ park.missing.activities|length }}</span>
+                        <span class="lbl">act.</span>
+                    </div>
+                    <div class="park-stat {{ 'missing' if park.missing.housings|length > 0 else 'ok' }}">
+                        <div class="dot hou"></div>
+                        <span class="val">{{ park.missing.housings|length }}</span>
+                        <span class="lbl">acc.</span>
+                    </div>
+                    <div class="park-stat {{ 'missing' if park.missing.restaurants|length > 0 else 'ok' }}">
+                        <div class="dot res"></div>
+                        <span class="val">{{ park.missing.restaurants|length }}</span>
+                        <span class="lbl">rest.</span>
+                    </div>
+                    <div class="park-stat {{ 'missing' if park.missing.surroundings|length > 0 else 'ok' }}">
+                        <div class="dot sur"></div>
+                        <span class="val">{{ park.missing.surroundings|length }}</span>
+                        <span class="lbl">surr.</span>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    {% if park.missing.activities %}
+                    <div class="detail-cat">Missing Activities</div>
+                    <div class="detail-list">
+                        {% for a in park.missing.activities %}
+                        <span>{{ a.name }}</span>{% if not loop.last %}<span class="sep">&bull;</span>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if park.missing.housings %}
+                    <div class="detail-cat" style="margin-top: 4px;">Missing Accommodations</div>
+                    <div class="detail-list">
+                        {% for h in park.missing.housings %}
+                        <span>{{ h.name }}</span>{% if not loop.last %}<span class="sep">&bull;</span>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if park.missing.restaurants %}
+                    <div class="detail-cat" style="margin-top: 4px;">Missing Restaurants</div>
+                    <div class="detail-list">
+                        {% for r in park.missing.restaurants %}
+                        <span>{{ r.name }}</span>{% if not loop.last %}<span class="sep">&bull;</span>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if park.missing.surroundings %}
+                    <div class="detail-cat sur-cat" style="margin-top: 4px;">Missing Surroundings</div>
+                    <div class="detail-list">
+                        {% for s in park.missing.surroundings %}
+                        <span>{{ s.name }}</span>{% if not loop.last %}<span class="sep">&bull;</span>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if not park.missing.activities and not park.missing.housings and not park.missing.restaurants and not park.missing.surroundings %}
+                    <div class="detail-ok">All photos OK</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="page-footer">
+        <span>IconoFinder &mdash; {{ c.name }}</span>
+        <span>Page {{ loop.index + 1 }}</span>
+    </div>
+</div>
+{% endfor %}
+
+</body>
+</html>
