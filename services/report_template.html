@@ -660,9 +660,11 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
 <script>
 window.addEventListener('load', function() {
-    // Wait for images to fully render
+    // Wait for images to fully load
     setTimeout(function() {
-        var pages = document.querySelectorAll('.page');
+        // Hide overlay BEFORE capture
+        document.getElementById('pdfOverlay').style.display = 'none';
+
         var opt = {
             margin: 0,
             filename: '{{ report_title | replace(" ", "_") }}_report.pdf',
@@ -671,10 +673,8 @@ window.addEventListener('load', function() {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
             pagebreak: { mode: ['css'] }
         };
-        html2pdf().set(opt).from(document.body).save().then(function() {
-            document.getElementById('pdfOverlay').style.display = 'none';
-        });
-    }, 500);
+        html2pdf().set(opt).from(document.body).save();
+    }, 1000);
 });
 </script>
 {% endif %}
