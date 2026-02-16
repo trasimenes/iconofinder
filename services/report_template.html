@@ -41,7 +41,7 @@ body {
     background: #f0f1f6;
     overflow: hidden;
 }
-.page:last-child { page-break-after: avoid; }
+.page:last-child { page-break-after: avoid; margin-bottom: 0; }
 
 /* ─── HEADER BAR (on every page) ─── */
 .page-header {
@@ -662,8 +662,14 @@ body {
 window.addEventListener('load', function() {
     // Wait for images to fully load
     setTimeout(function() {
-        // Hide overlay BEFORE capture
-        document.getElementById('pdfOverlay').style.display = 'none';
+        // Remove overlay from DOM BEFORE capture
+        document.getElementById('pdfOverlay').remove();
+
+        // Remove empty pages (no park cards, no table rows)
+        document.querySelectorAll('.page').forEach(function(page) {
+            var hasContent = page.querySelector('.kpi-row, .park-card, .summary-table');
+            if (!hasContent) page.remove();
+        });
 
         var opt = {
             margin: 0,
