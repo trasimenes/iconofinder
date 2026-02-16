@@ -1,12 +1,13 @@
 import requests
 import re
-from bs4 import BeautifulSoup
 from config.urls import PARKS_URLS
+
+PRESTATION_API_BASE = "https://prestation-api.groupepvcp.com/v1/activities/cpe"
+PHOTOS_BASE_URL = "https://photos.centerparcs.com/admin/"
 
 class ActivityService:
     def __init__(self):
         self.session = requests.Session()
-        # Headers minimaux comme curl
         self.session.headers.update({
             'User-Agent': 'curl/8.7.1',
             'Accept': '*/*'
@@ -27,189 +28,96 @@ class ActivityService:
                 }
         return urls
 
+    def _extract_product_code(self, parc_url):
+        """Extract product code from park URL (e.g. 'VN' from fp_VN_...)"""
+        match = re.search(r'fp_([A-Z]+)_', parc_url)
+        return match.group(1) if match else None
+
+    def _extract_lang_code(self, parc_url):
+        """Extract language code from park URL (e.g. 'fr' from /fr-fr/, 'wl' from /be-wl/)"""
+        match = re.search(r'centerparcs\.[a-z]+/([a-z]{2})-([a-z]{2})/', parc_url)
+        return match.group(2) if match else None
+
+    def _get_photo_path(self, photo):
+        """Extract the 500x375 photo path from the API photo dict (values are lists)"""
+        if not photo:
+            return ''
+        paths = photo.get('500x375', [])
+        if not paths or not paths[0]:
+            return ''
+        return paths[0]
+
+    def _has_valid_photo(self, photo):
+        """Check if a prestation photo dict contains a valid (non-placeholder) photo"""
+        path = self._get_photo_path(photo)
+        if not path:
+            return False
+        if 'default/' in path:
+            return False
+        return True
+
+    def _build_photo_url(self, photo):
+        """Build full photo URL from prestation API photo dict"""
+        path = self._get_photo_path(photo)
+        if not path:
+            return ''
+        return PHOTOS_BASE_URL + path
+
     def get_activities_with_placeholders(self, parc_url):
         """
-        Récupère les activités qui ont des images manquantes
+        Récupère les activités via l'API prestation Center Parcs
+        et détecte les images manquantes
         """
         print(f"\n=== ANALYSE DES ACTIVITÉS ===")
         print(f"URL: {parc_url}")
-        
+
         try:
-            response = self.session.get(parc_url, timeout=30)  # Ajout d'un timeout de 30 secondes
+            product_code = self._extract_product_code(parc_url)
+            lang_code = self._extract_lang_code(parc_url)
+
+            if not product_code or not lang_code:
+                return {
+                    'activities': [],
+                    'no_missing_photos': False,
+                    'error': f"Impossible d'extraire les paramètres de l'URL: product_code={product_code}, lang_code={lang_code}"
+                }
+
+            api_url = f"{PRESTATION_API_BASE}/{lang_code}/SUMMER/{product_code}"
+            print(f"API URL: {api_url}")
+
+            response = self.session.get(api_url, timeout=30)
             response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Chercher tous les blocs d'activités avec différentes approches
-            activity_blocks = []
 
-            # 1. Chercher par éléments <figure> (nouvelle structure du site)
-            activity_blocks.extend(soup.find_all('figure'))
+            data = response.json()
+            prestations = data.get('data', {}).get('prestation', [])
+            print(f"\nActivités trouvées via API: {len(prestations)}")
 
-            # 2. Chercher par classe contenant "activity" ou "Activity"
-            activity_blocks.extend(soup.find_all(class_=lambda x: x and ('activity' in x.lower() or 'Activity' in x)))
-
-            # 3. Chercher par data-attribute
-            activity_blocks.extend(soup.find_all(attrs={'data-type': 'activity'}))
-            activity_blocks.extend(soup.find_all(attrs={'data-category': 'activity'}))
-
-            # 4. Chercher par structure HTML (div/a avec h2/h3/h4 et img)
-            for element in soup.find_all(['div', 'a']):
-                if (element.find(['h2', 'h3', 'h4']) and element.find('img')):
-                    activity_blocks.append(element)
-
-            # Dédupliquer les blocs trouvés
-            activity_blocks = list(set(activity_blocks))
-            
-            print(f"\nBlocs d'activités trouvés: {len(activity_blocks)}")
-            
-            # Afficher un échantillon du HTML pour déboguer
-            print("\nÉchantillon du HTML:")
-            print(soup.prettify()[:1000])
-            
             all_activities = []
-            no_missing_photos = True
-            for block in activity_blocks:
-                # Chercher l'image avec différentes approches
-                img = None
-                picture = block.find('picture')
-                source = None
+            for prestation in prestations:
+                name = prestation.get('name', 'Activité sans nom')
+                photo = prestation.get('photo')
+                has_photo = self._has_valid_photo(photo)
+                image_url = self._build_photo_url(photo)
 
-                if picture:
-                    # Nouvelle structure avec <picture> et <source>
-                    source = picture.find('source')
-                    img = picture.find('img')
+                print(f"\nActivité: {name}")
+                if has_photo:
+                    print(f"  ✅ Photo: {image_url}")
                 else:
-                    img = block.find('img')
-                    if not img:
-                        img_container = block.find(class_=lambda x: x and ('image' in x.lower() or 'photo' in x.lower()))
-                        if img_container:
-                            picture = img_container.find('picture')
-                            if picture:
-                                source = picture.find('source')
-                                img = picture.find('img')
-                            else:
-                                img = img_container.find('img')
-
-                if not img:
-                    continue
-
-                # Récupérer le titre de l'activité - essayer plusieurs sélecteurs
-                title = None
-                # 1. Chercher dans <figcaption> (nouvelle structure)
-                figcaption = block.find('figcaption')
-                if figcaption:
-                    title = figcaption
-                # 2. Utiliser l'attribut alt de l'image
-                if not title and img.get('alt'):
-                    title = type('Title', (), {'text': img.get('alt')})()
-                # 3. Chercher dans les headings
-                if not title:
-                    for heading in ['h2', 'h3', 'h4', 'h5']:
-                        title_elem = block.find(heading)
-                        if title_elem:
-                            title = title_elem
-                            break
-                # 4. Chercher par classe title/name
-                if not title:
-                    title = block.find(class_=lambda x: x and ('title' in x.lower() or 'name' in x.lower()))
-                # 5. Utiliser le texte du bloc
-                if not title:
-                    text_content = block.get_text(strip=True)
-                    if text_content:
-                        title = type('Title', (), {'text': text_content})()
-                activity_name = title.text.strip() if title else "Activité sans nom"
-
-                # Nettoyer le nom : retirer le nom du parc s'il est à la fin
-                # Liste des noms de parcs connus
-                park_names = [
-                    "Villages Nature Paris", "Le Lac d'Ailette", "Les Hauts de Bruyères",
-                    "Le Bois aux Daims", "Les Bois-Francs", "Les Trois Forêts", "Les Landes de Gascogne",
-                    "Les Ardennes", "De Vossemeren", "Erperheide", "Park De Haan", "Terhills Resort",
-                    "Park Bostalsee", "Park Hochsauerland", "Park Allgäu", "Bispinger Heide",
-                    "Park Nordseeküste", "Park Eifel",
-                    "Port Zélande", "Het Heijderbos", "Park Zandvoort", "De Kempervennen",
-                    "De Huttenheugte", "De Eemhof", "Het Meerdal", "Parc Sandur", "Limburgse Peel",
-                    "Nordborg Resort"
-                ]
-                for park in park_names:
-                    if activity_name.endswith(park):
-                        activity_name = activity_name[:-len(park)].strip()
-                        break
-
-                # Récupérer les URLs d'image depuis plusieurs sources
-                src = img.get('src', '')
-                data_src = img.get('data-src', '')
-                data_url_desktop = img.get('data-url-desktop', '')
-
-                # Récupérer aussi depuis <source> si présent (nouvelle structure)
-                srcset = ''
-                data_srcset = ''
-                if source:
-                    srcset = source.get('srcset', '')
-                    data_srcset = source.get('data-srcset', '')
-                print(f"\nAnalyse de l'activité: {activity_name}")
-                print(f"- src: {src}")
-                print(f"- data-src: {data_src}")
-                print(f"- data-url-desktop: {data_url_desktop}")
-                print(f"- srcset: {srcset}")
-                print(f"- data-srcset: {data_srcset}")
-
-                # Toutes les sources d'images possibles
-                all_sources = [src, data_src, data_url_desktop, srcset, data_srcset]
-
-                # Pattern pour détecter les placeholders :
-                # UNIQUEMENT /default/ dans le chemin (ex: /assets/images/default/500x375.jpg)
-                # Note: AAA_XXXXX sont des images valides, pas des placeholders
-                placeholder_pattern = re.compile(r'/default/', re.IGNORECASE)
-
-                def is_placeholder(url):
-                    """Vérifie si une URL est un placeholder"""
-                    if not url:
-                        return True
-                    return bool(placeholder_pattern.search(url))
-
-                is_missing = False
-                if not any(all_sources):
-                    is_missing = True
-                    print("❌ Aucune source d'image trouvée")
-                elif all(is_placeholder(url) for url in all_sources if url):
-                    is_missing = True
-                    print("❌ Image placeholder détectée (/default/)")
-                elif all(url == '' for url in all_sources):
-                    is_missing = True
-                    print("❌ Sources d'images vides")
-                else:
-                    print("✅ Image valide trouvée")
-
-                if is_missing:
-                    no_missing_photos = False
-
-                # Choisir la meilleure source d'image disponible
-                best_image = src or data_src or data_url_desktop or srcset or data_srcset or "Pas d'URL d'image"
+                    print(f"  ❌ Photo manquante")
 
                 all_activities.append({
-                    'name': activity_name,
-                    'image_src': best_image,
-                    'has_photos': not is_missing
+                    'name': name,
+                    'image_src': image_url or "Pas d'URL d'image",
+                    'has_photos': has_photo
                 })
 
-            # Dédupliquer par nom d'activité (garder la première occurrence)
-            seen_names = set()
-            unique_activities = []
-            for activity in all_activities:
-                if activity['name'] not in seen_names:
-                    seen_names.add(activity['name'])
-                    unique_activities.append(activity)
-
-            # Recalculer no_missing_photos après déduplication
-            no_missing_photos = all(a['has_photos'] for a in unique_activities) if unique_activities else True
+            no_missing_photos = all(a['has_photos'] for a in all_activities) if all_activities else True
 
             return {
-                'activities': unique_activities,
+                'activities': all_activities,
                 'no_missing_photos': no_missing_photos
             }
-            
+
         except requests.exceptions.ConnectionError as e:
             print(f"Erreur de connexion: {str(e)}")
             return {
