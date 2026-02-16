@@ -238,7 +238,7 @@ def _compute_totals(parks):
 
 # ─── Build template data ───
 
-def _build_report_data(snapshot_data, country_filter=None, include=None):
+def _build_report_data(snapshot_data, country_filter=None, include=None, for_browser=False):
     """Build the full data structure for the HTML template."""
     if include is None:
         include = {'activities', 'housings', 'restaurants', 'surroundings'}
@@ -277,13 +277,20 @@ def _build_report_data(snapshot_data, country_filter=None, include=None):
             'totals': totals,
         })
 
-    # Download covers
-    covers = _ensure_covers(all_park_names)
-    for c in countries:
-        for park in c['parks']:
-            cover_path = covers.get(park['name'])
-            if cover_path:
-                park['cover'] = f'file://{os.path.abspath(cover_path)}'
+    # Set cover image URLs
+    if for_browser:
+        for c in countries:
+            for park in c['parks']:
+                url = _get_cover_url(park['name'])
+                if url:
+                    park['cover'] = url
+    else:
+        covers = _ensure_covers(all_park_names)
+        for c in countries:
+            for park in c['parks']:
+                cover_path = covers.get(park['name'])
+                if cover_path:
+                    park['cover'] = f'file://{os.path.abspath(cover_path)}'
 
     # Grand totals
     grand_totals = {'activities': 0, 'housings': 0, 'restaurants': 0, 'surroundings': 0}
@@ -334,7 +341,7 @@ def render_country_report_html(country, snapshot_data, include=None):
     if include is None:
         include = {'activities', 'housings', 'restaurants', 'surroundings'}
     date_str = datetime.datetime.now().strftime('%d/%m/%Y')
-    data = _build_report_data(snapshot_data, country_filter=country, include=include)
+    data = _build_report_data(snapshot_data, country_filter=country, include=include, for_browser=True)
     title = COUNTRY_NAMES_EN.get(country, country)
     return _render_html(data, title, date_str, for_browser=True)
 
@@ -344,7 +351,7 @@ def render_global_report_html(snapshot_data, include=None):
     if include is None:
         include = {'activities', 'housings', 'restaurants', 'surroundings'}
     date_str = datetime.datetime.now().strftime('%d/%m/%Y')
-    data = _build_report_data(snapshot_data, country_filter=None, include=include)
+    data = _build_report_data(snapshot_data, country_filter=None, include=include, for_browser=True)
     return _render_html(data, 'All countries', date_str, for_browser=True)
 
 
