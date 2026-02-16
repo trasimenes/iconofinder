@@ -631,6 +631,21 @@ body {
 {% endfor %}
 
 {% if for_browser %}
+<style>
+.page {
+    height: auto !important;
+    page-break-after: auto !important;
+    padding-bottom: 20mm;
+}
+.page + .page {
+    page-break-before: always;
+}
+.page-footer {
+    position: relative !important;
+    bottom: auto !important;
+    margin-top: 16px;
+}
+</style>
 <div id="pdfOverlay" class="pdf-overlay">
     <div class="pdf-modal">
         <div class="pdf-spinner"></div>
