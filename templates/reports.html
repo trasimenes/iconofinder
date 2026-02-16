@@ -255,28 +255,10 @@ function fetchPdf(country, selected) {
     params.set('country', country);
     selected.forEach(s => params.append('include', s));
 
-    fetch(`/reports/download?${params.toString()}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Error generating report');
-            return response.blob();
-        })
-        .then(blob => {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            const disposition = country === 'all' ? 'report_global' : `report_${country}`;
-            a.download = `${disposition}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(a.href);
-            setTimeout(() => location.reload(), 500);
-        })
-        .catch(err => {
-            alert(err.message);
-        })
-        .finally(() => {
-            resetBtn();
-        });
+    // Open report in new tab - user clicks "Save as PDF" there
+    window.open(`/reports/download?${params.toString()}`, '_blank');
+    resetBtn();
+    hideProgress();
 }
 
 function resetBtn() {

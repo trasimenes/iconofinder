@@ -18,7 +18,7 @@ from services.restaurants import RestaurantService
 from services.surroundings import SurroundingsService
 from utils.translations import load_translations, get_translation, translations
 from utils.stats import compute_stats
-from services.pdf_report import generate_country_report, generate_global_report, list_reports
+from services.pdf_report import generate_country_report, generate_global_report, list_reports, render_country_report_html, render_global_report_html
 
 # Configuration du logging pour filtrer les erreurs TLS/SSL
 class TLSErrorFilter(logging.Filter):
@@ -829,13 +829,11 @@ def download_report():
     snapshot_data = snapshots[-1]['data']
 
     if country == 'all':
-        filepath = generate_global_report(snapshot_data, REPORTS_DIR, include)
+        html = render_global_report_html(snapshot_data, include)
     else:
-        filepath = generate_country_report(country, snapshot_data, REPORTS_DIR, include)
+        html = render_country_report_html(country, snapshot_data, include)
 
-    return send_file(filepath, as_attachment=True,
-                     download_name=os.path.basename(filepath),
-                     mimetype='application/pdf')
+    return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/reports/from_snapshot/<int:snap_id>')
 @login_required
@@ -846,21 +844,9 @@ def report_from_snapshot(snap_id):
         return redirect(url_for('snapshot_manager'))
 
     snapshot_data = snap['data']
-    filepath = generate_global_report(snapshot_data, REPORTS_DIR)
+    html = render_global_report_html(snapshot_data)
 
-    return send_file(filepath, as_attachment=True,
-                     download_name=os.path.basename(filepath),
-                     mimetype='application/pdf')
-
-@app.route('/reports/history/<filename>')
-@login_required
-def download_report_history(filename):
-    filepath = os.path.join(REPORTS_DIR, filename)
-    if not os.path.exists(filepath) or not filename.endswith('.pdf'):
-        return redirect(url_for('reports'))
-    return send_file(filepath, as_attachment=True,
-                     download_name=filename,
-                     mimetype='application/pdf')
+    return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/reports/delete/<filename>')
 @login_required

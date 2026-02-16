@@ -308,22 +308,45 @@ def _build_report_data(snapshot_data, country_filter=None, include=None):
     }
 
 
-def _render_html(data, report_title, date_str):
+def _render_html(data, report_title, date_str, for_browser=False):
     """Render the HTML template with data."""
     with open(TEMPLATE_PATH, 'r', encoding='utf-8') as f:
         template = Template(f.read())
 
-    fonts_dir = f'file://{os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fonts"))}'
+    if for_browser:
+        fonts_dir = '/static/fonts'
+    else:
+        fonts_dir = f'file://{os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fonts"))}'
 
     return template.render(
         fonts_dir=fonts_dir,
         report_title=report_title,
         date_str=date_str,
+        for_browser=for_browser,
         **data,
     )
 
 
 # ─── Public API ───
+
+def render_country_report_html(country, snapshot_data, include=None):
+    """Render report HTML for browser display. Returns HTML string."""
+    if include is None:
+        include = {'activities', 'housings', 'restaurants', 'surroundings'}
+    date_str = datetime.datetime.now().strftime('%d/%m/%Y')
+    data = _build_report_data(snapshot_data, country_filter=country, include=include)
+    title = COUNTRY_NAMES_EN.get(country, country)
+    return _render_html(data, title, date_str, for_browser=True)
+
+
+def render_global_report_html(snapshot_data, include=None):
+    """Render report HTML for browser display. Returns HTML string."""
+    if include is None:
+        include = {'activities', 'housings', 'restaurants', 'surroundings'}
+    date_str = datetime.datetime.now().strftime('%d/%m/%Y')
+    data = _build_report_data(snapshot_data, country_filter=None, include=include)
+    return _render_html(data, 'All countries', date_str, for_browser=True)
+
 
 def generate_country_report(country, snapshot_data, output_dir, include=None):
     """Generate a PDF report for a single country. Returns the file path."""
