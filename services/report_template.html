@@ -240,19 +240,20 @@ body {
 .park-card.full-width {
     width: 100%;
 }
-.park-cover {
-    width: 100%;
-    height: 55px;
-    object-fit: cover;
-    object-position: center 30%;
-    display: block;
-}
-/* Wrapper ensures html2canvas respects object-fit via overflow clip */
+/* Background image avoids html2canvas object-fit distortion */
 .park-cover-wrap {
     width: 100%;
     height: 55px;
     overflow: hidden;
     flex-shrink: 0;
+}
+.park-cover {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-size: cover;
+    background-position: center 30%;
+    background-repeat: no-repeat;
 }
 .park-body {
     padding: 10px 14px;
@@ -397,7 +398,7 @@ body {
 .country-detail-table tr:last-child td { border-bottom: none; }
 </style>
 </head>
-<body>
+<body{% if for_browser %} class="browser-view"{% endif %}>
 
 <!-- ═══════════ PAGE 1: DASHBOARD ═══════════ -->
 <div class="page">
@@ -453,16 +454,16 @@ body {
                 <div class="bar-row">
                     <div class="bar-label">{{ c.name }}</div>
                     <div class="bar-track">
-                        <div class="bar-fill activities" style="width: {{ (c.totals.activities / max_total * 100) if max_total > 0 else 0 }}%; display: inline-block; vertical-align: top;"></div>
+                        <div class="bar-fill activities" style="width: {{ c.missing_rates_display.activities|round(1) }}%; display: inline-block; vertical-align: top;"></div>
                     </div>
                     <div class="bar-track">
-                        <div class="bar-fill housings" style="width: {{ (c.totals.housings / max_total * 100) if max_total > 0 else 0 }}%;"></div>
+                        <div class="bar-fill housings" style="width: {{ c.missing_rates_display.housings|round(1) }}%;"></div>
                     </div>
                     <div class="bar-track">
-                        <div class="bar-fill restaurants" style="width: {{ (c.totals.restaurants / max_total * 100) if max_total > 0 else 0 }}%;"></div>
+                        <div class="bar-fill restaurants" style="width: {{ c.missing_rates_display.restaurants|round(1) }}%;"></div>
                     </div>
                     <div class="bar-track">
-                        <div class="bar-fill surroundings" style="width: {{ (c.totals.surroundings / max_total * 100) if max_total > 0 else 0 }}%;"></div>
+                        <div class="bar-fill surroundings" style="width: {{ c.missing_rates_display.surroundings|round(1) }}%;"></div>
                     </div>
                     <div class="bar-value">{{ c.totals.activities + c.totals.housings + c.totals.restaurants + c.totals.surroundings }}</div>
                 </div>
@@ -549,21 +550,22 @@ body {
     </div>
 </div>
 
-<!-- ═══════════ PAGES 2+: ONE PER COUNTRY ═══════════ -->
+<!-- ═══════════ PAGES 2+: COUNTRY PARKS (6 per page) ═══════════ -->
+{% set pg = namespace(num=2) %}
 {% for c in countries %}
-<div class="page">
+  {% for page_parks in c.parks | batch(6) %}
+  <div class="page">
     <div class="page-header">
-        <h1>{{ c.name }}</h1>
+        <h1>{{ c.name }}{% if not loop.first %} (cont.){% endif %}</h1>
         <div class="meta">{{ c.parks|length }} parks &middot; {{ c.totals.activities + c.totals.housings + c.totals.restaurants + c.totals.surroundings }} missing photos</div>
     </div>
 
-    {% set ns = namespace(has_overflow=false) %}
     <div class="parks-grid">
-        {% for park in c.parks %}
+        {% for park in page_parks %}
         <div class="park-card{% if c.parks|length == 1 %} full-width{% endif %}">
             {% if park.cover %}
             <div class="park-cover-wrap">
-                <img class="park-cover" src="{{ park.cover }}" alt="{{ park.name }}">
+                <div class="park-cover" style="background-image: url('{{ park.cover }}');" role="img" aria-label="{{ park.name }}"></div>
             </div>
             {% endif %}
             <div class="park-body">
@@ -634,22 +636,34 @@ body {
 
     <div class="page-footer">
         <span>IconoFinder &mdash; {{ c.name }}</span>
-        <span>Page {{ loop.index + 1 }}</span>
+        <span>Page {{ pg.num }}</span>
     </div>
-</div>
+  </div>
+  {% set pg.num = pg.num + 1 %}
+  {% endfor %}
 {% endfor %}
 
 {% if for_browser %}
 <style>
-.page {
+.browser-view .page {
     height: auto !important;
     overflow: visible !important;
     padding-bottom: 20px !important;
 }
-.page-footer {
+.browser-view .page-footer {
     position: relative !important;
     bottom: auto !important;
     margin-top: 16px;
+}
+.pdf-capture .page {
+    height: 210mm !important;
+    overflow: hidden !important;
+    padding: 16mm 20mm !important;
+}
+.pdf-capture .page-footer {
+    position: absolute !important;
+    bottom: 10mm !important;
+    margin-top: 0 !important;
 }
 </style>
 <div id="pdfOverlay" class="pdf-overlay">
@@ -685,14 +699,34 @@ window.addEventListener('load', function() {
     setTimeout(async function() {
         document.getElementById('pdfOverlay').remove();
 
+        // CRITICAL: remove browser-view BEFORE pdf-capture
+        // browser-view sets height:auto !important which conflicts
+        document.body.classList.remove('browser-view');
+        document.body.classList.add('pdf-capture');
+
+        // Double rAF to ensure full layout reflow with new styles
+        await new Promise(function(r) { requestAnimationFrame(function() { requestAnimationFrame(r); }); });
+
         // Remove empty pages
         document.querySelectorAll('.page').forEach(function(page) {
             var hasContent = page.querySelector('.kpi-row, .park-card, .summary-table');
             if (!hasContent) page.remove();
         });
 
-        var pages = document.querySelectorAll('.page');
-        if (pages.length === 0) return;
+        var pages = Array.from(document.querySelectorAll('.page'));
+        if (pages.length === 0) { return; }
+
+        // Re-number pages sequentially
+        pages.forEach(function(page, idx) {
+
+            var footerSpans = page.querySelectorAll('.page-footer span');
+            if (footerSpans.length > 1) {
+                footerSpans[1].textContent = 'Page ' + (idx + 1);
+            }
+        });
+
+        // Wait for images and reflow
+        await new Promise(function(r) { setTimeout(r, 300); });
 
         var pdf = new window.jspdf.jsPDF({
             unit: 'mm', format: 'a4', orientation: 'landscape'
@@ -701,47 +735,46 @@ window.addEventListener('load', function() {
         var isFirstPdfPage = true;
 
         for (var i = 0; i < pages.length; i++) {
-            var canvas = await html2canvas(pages[i], {
-                scale: 2, useCORS: true, letterRendering: true
+            var page = pages[i];
+
+            // html2canvas ignores overflow:hidden (known bug #1511).
+            // Use x/y/width/height as CROP window to capture only the
+            // visible 297×210mm area, regardless of scrollHeight.
+            var w = page.offsetWidth;
+            var h = page.offsetHeight;
+
+            var canvas = await html2canvas(page, {
+                scale: 2,
+                useCORS: true,
+                letterRendering: true,
+                backgroundColor: '#f0f1f6',
+                x: 0,
+                y: 0,
+                width: w,
+                height: h,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: w,
+                windowHeight: h
             });
 
-            // Height the image would be at full A4 width, maintaining aspect ratio
-            var imgH = (canvas.height * pdfW) / canvas.width;
+            if (!isFirstPdfPage) pdf.addPage();
+            isFirstPdfPage = false;
 
-            if (imgH <= pdfH) {
-                // Fits in one PDF page — add as-is
-                if (!isFirstPdfPage) pdf.addPage();
-                isFirstPdfPage = false;
-                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, imgH);
-            } else {
-                // Content overflows — slice canvas into A4-sized chunks
-                var onePageH = Math.floor(canvas.width * pdfH / pdfW);
-                var totalSlices = Math.ceil(canvas.height / onePageH);
-
-                var sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width = canvas.width;
-                var sliceCtx = sliceCanvas.getContext('2d');
-
-                for (var s = 0; s < totalSlices; s++) {
-                    var srcY = s * onePageH;
-                    var srcH = Math.min(onePageH, canvas.height - srcY);
-
-                    sliceCanvas.height = srcH;
-                    sliceCtx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-                    sliceCtx.drawImage(canvas,
-                        0, srcY, canvas.width, srcH,
-                        0, 0, canvas.width, srcH);
-
-                    if (!isFirstPdfPage) pdf.addPage();
-                    isFirstPdfPage = false;
-
-                    var sliceH = (srcH * pdfW) / canvas.width;
-                    pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, sliceH);
-                }
-            }
+            // Fit-to-page with preserved aspect ratio to avoid distortion
+            var imgData = canvas.toDataURL('image/jpeg', 0.95);
+            var imgW = canvas.width;
+            var imgH = canvas.height;
+            var scale = Math.min(pdfW / imgW, pdfH / imgH);
+            var renderW = imgW * scale;
+            var renderH = imgH * scale;
+            var renderX = (pdfW - renderW) / 2;
+            var renderY = (pdfH - renderH) / 2;
+            pdf.addImage(imgData, 'JPEG', renderX, renderY, renderW, renderH);
         }
 
         pdf.save('{{ report_title | replace(" ", "_") }}_report.pdf');
+        document.body.classList.remove('pdf-capture');
     }, 1000);
 });
 </script>

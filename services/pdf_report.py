@@ -8,6 +8,7 @@ import requests
 from jinja2 import Template
 
 DEFAULT_FRAGMENT = 'default/'
+DISPLAY_RATE_EXPONENT = 0.5
 
 # French → English country name mapping
 COUNTRY_NAMES_EN = {
@@ -236,6 +237,35 @@ def _compute_totals(parks):
     return totals
 
 
+def _compute_item_totals(snapshot_data, country, include=None):
+    if include is None:
+        include = {'activities', 'housings', 'restaurants', 'surroundings'}
+    totals = {'activities': 0, 'housings': 0, 'restaurants': 0, 'surroundings': 0}
+
+    if 'activities' in include:
+        for park_data in snapshot_data.get('activities', {}).get(country, {}).values():
+            totals['activities'] += len(park_data.get('activities', []))
+
+    if 'housings' in include:
+        for park_data in snapshot_data.get('housings', {}).get(country, {}).values():
+            totals['housings'] += len(park_data.get('housings', []))
+
+    if 'restaurants' in include:
+        for park_data in snapshot_data.get('restaurants', {}).get(country, {}).values():
+            totals['restaurants'] += len(park_data.get('restaurants', []))
+
+    if 'surroundings' in include:
+        for park_data in snapshot_data.get('surroundings', {}).get(country, {}).values():
+            totals['surroundings'] += len(park_data.get('surroundings', []))
+
+    return totals
+
+
+def _scale_missing_rate(rate, exponent=DISPLAY_RATE_EXPONENT):
+    normalized = max(0.0, min(1.0, rate / 100))
+    return (normalized ** exponent) * 100
+
+
 # ─── Build template data ───
 
 def _build_report_data(snapshot_data, country_filter=None, include=None, for_browser=False):
@@ -260,6 +290,16 @@ def _build_report_data(snapshot_data, country_filter=None, include=None, for_bro
     for country_name in all_country_names:
         parks_data = _extract_missing_items(snapshot_data, country_name, include)
         totals = _compute_totals(parks_data)
+        item_totals = _compute_item_totals(snapshot_data, country_name, include)
+        missing_rates = {}
+        missing_rates_display = {}
+        for key in totals:
+            total_items = item_totals.get(key, 0)
+            if total_items > 0:
+                missing_rates[key] = min(100, (totals[key] / total_items) * 100)
+            else:
+                missing_rates[key] = 0
+            missing_rates_display[key] = _scale_missing_rate(missing_rates[key])
 
         parks_list = []
         for park_name in sorted(parks_data.keys()):
@@ -275,6 +315,9 @@ def _build_report_data(snapshot_data, country_filter=None, include=None, for_bro
             'name': display_name,
             'parks': parks_list,
             'totals': totals,
+            'item_totals': item_totals,
+            'missing_rates': missing_rates,
+            'missing_rates_display': missing_rates_display,
         })
 
     # Set cover image URLs
@@ -404,7 +447,7 @@ def list_reports(output_dir):
             created = datetime.datetime.fromtimestamp(stat.st_mtime)
             reports.append({
                 'filename': filename,
-                'created_at': created.strftime('%Y-%m-%d %H:%M:%S'),
+                'created_at': created.strftime('%d/%m/%Y %H:%M:%S'),
                 'size': f'{size_kb} KB'
             })
     return reports
