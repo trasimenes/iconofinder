@@ -634,11 +634,8 @@ body {
 <style>
 .page {
     height: auto !important;
-    page-break-after: auto !important;
-    padding-bottom: 20mm;
-}
-.page + .page {
-    page-break-before: always;
+    overflow: visible !important;
+    padding-bottom: 20px !important;
 }
 .page-footer {
     position: relative !important;
@@ -675,26 +672,39 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
 <script>
 window.addEventListener('load', function() {
-    // Wait for images to fully load
     setTimeout(function() {
-        // Remove overlay from DOM BEFORE capture
         document.getElementById('pdfOverlay').remove();
 
-        // Remove empty pages (no park cards, no table rows)
+        // Remove empty pages
         document.querySelectorAll('.page').forEach(function(page) {
             var hasContent = page.querySelector('.kpi-row, .park-card, .summary-table');
             if (!hasContent) page.remove();
         });
 
-        var opt = {
+        var pages = document.querySelectorAll('.page');
+        if (pages.length === 0) return;
+
+        // Build PDF page by page to avoid blank interstitial pages
+        var worker = html2pdf().set({
             margin: 0,
             filename: '{{ report_title | replace(" ", "_") }}_report.pdf',
             image: { type: 'jpeg', quality: 0.95 },
             html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-            pagebreak: { mode: ['css'] }
-        };
-        html2pdf().set(opt).from(document.body).save();
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        });
+
+        // Render first page
+        worker = worker.from(pages[0]).toContainer().toCanvas().toPdf();
+
+        // Add subsequent pages one by one
+        for (var i = 1; i < pages.length; i++) {
+            worker = worker.get('pdf').then(function(pdf) {
+                pdf.addPage();
+            });
+            worker = worker.from(pages[i]).toContainer().toCanvas().toPdf();
+        }
+
+        worker.save();
     }, 1000);
 });
 </script>
