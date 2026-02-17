@@ -247,6 +247,13 @@ body {
     object-position: center 30%;
     display: block;
 }
+/* Wrapper ensures html2canvas respects object-fit via overflow clip */
+.park-cover-wrap {
+    width: 100%;
+    height: 55px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
 .park-body {
     padding: 10px 14px;
     flex: 1;
@@ -555,7 +562,9 @@ body {
         {% for park in c.parks %}
         <div class="park-card{% if c.parks|length == 1 %} full-width{% endif %}">
             {% if park.cover %}
-            <img class="park-cover" src="{{ park.cover }}" alt="{{ park.name }}">
+            <div class="park-cover-wrap">
+                <img class="park-cover" src="{{ park.cover }}" alt="{{ park.name }}">
+            </div>
             {% endif %}
             <div class="park-body">
                 <div class="park-name">{{ park.name }}</div>
@@ -689,24 +698,47 @@ window.addEventListener('load', function() {
             unit: 'mm', format: 'a4', orientation: 'landscape'
         });
         var pdfW = 297, pdfH = 210;
+        var isFirstPdfPage = true;
 
         for (var i = 0; i < pages.length; i++) {
-            if (i > 0) pdf.addPage();
-
             var canvas = await html2canvas(pages[i], {
                 scale: 2, useCORS: true, letterRendering: true
             });
 
-            var imgData = canvas.toDataURL('image/jpeg', 0.95);
-            var imgW = pdfW;
+            // Height the image would be at full A4 width, maintaining aspect ratio
             var imgH = (canvas.height * pdfW) / canvas.width;
 
-            if (imgH > pdfH) {
-                imgH = pdfH;
-                imgW = (canvas.width * pdfH) / canvas.height;
-            }
+            if (imgH <= pdfH) {
+                // Fits in one PDF page — add as-is
+                if (!isFirstPdfPage) pdf.addPage();
+                isFirstPdfPage = false;
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, imgH);
+            } else {
+                // Content overflows — slice canvas into A4-sized chunks
+                var onePageH = Math.floor(canvas.width * pdfH / pdfW);
+                var totalSlices = Math.ceil(canvas.height / onePageH);
 
-            pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+                var sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                var sliceCtx = sliceCanvas.getContext('2d');
+
+                for (var s = 0; s < totalSlices; s++) {
+                    var srcY = s * onePageH;
+                    var srcH = Math.min(onePageH, canvas.height - srcY);
+
+                    sliceCanvas.height = srcH;
+                    sliceCtx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                    sliceCtx.drawImage(canvas,
+                        0, srcY, canvas.width, srcH,
+                        0, 0, canvas.width, srcH);
+
+                    if (!isFirstPdfPage) pdf.addPage();
+                    isFirstPdfPage = false;
+
+                    var sliceH = (srcH * pdfW) / canvas.width;
+                    pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfW, sliceH);
+                }
+            }
         }
 
         pdf.save('{{ report_title | replace(" ", "_") }}_report.pdf');
