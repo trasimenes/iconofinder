@@ -669,10 +669,11 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .pdf-text { font-weight: 600; font-size: 11pt; color: #1a1a2e; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 window.addEventListener('load', function() {
-    setTimeout(function() {
+    setTimeout(async function() {
         document.getElementById('pdfOverlay').remove();
 
         // Remove empty pages
@@ -684,27 +685,31 @@ window.addEventListener('load', function() {
         var pages = document.querySelectorAll('.page');
         if (pages.length === 0) return;
 
-        // Build PDF page by page to avoid blank interstitial pages
-        var worker = html2pdf().set({
-            margin: 0,
-            filename: '{{ report_title | replace(" ", "_") }}_report.pdf',
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        var pdf = new window.jspdf.jsPDF({
+            unit: 'mm', format: 'a4', orientation: 'landscape'
         });
+        var pdfW = 297, pdfH = 210;
 
-        // Render first page
-        worker = worker.from(pages[0]).toContainer().toCanvas().toPdf();
+        for (var i = 0; i < pages.length; i++) {
+            if (i > 0) pdf.addPage();
 
-        // Add subsequent pages one by one
-        for (var i = 1; i < pages.length; i++) {
-            worker = worker.get('pdf').then(function(pdf) {
-                pdf.addPage();
+            var canvas = await html2canvas(pages[i], {
+                scale: 2, useCORS: true, letterRendering: true
             });
-            worker = worker.from(pages[i]).toContainer().toCanvas().toPdf();
+
+            var imgData = canvas.toDataURL('image/jpeg', 0.95);
+            var imgW = pdfW;
+            var imgH = (canvas.height * pdfW) / canvas.width;
+
+            if (imgH > pdfH) {
+                imgH = pdfH;
+                imgW = (canvas.width * pdfH) / canvas.height;
+            }
+
+            pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
         }
 
-        worker.save();
+        pdf.save('{{ report_title | replace(" ", "_") }}_report.pdf');
     }, 1000);
 });
 </script>
