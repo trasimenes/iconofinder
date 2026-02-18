@@ -833,6 +833,18 @@ def download_report():
     else:
         html = render_country_report_html(country, snapshot_data, include)
 
+    # Save the report to generated_reports/
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    if country == 'all':
+        safe_name = 'global'
+    else:
+        safe_name = country.replace(' ', '_').replace("'", '')
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'report_{safe_name}_{timestamp}.html'
+    filepath = os.path.join(REPORTS_DIR, filename)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(html)
+
     return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
 @app.route('/reports/from_snapshot/<int:snap_id>')
@@ -848,11 +860,24 @@ def report_from_snapshot(snap_id):
 
     return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
+@app.route('/reports/history/<filename>')
+@login_required
+def serve_report(filename):
+    filepath = os.path.join(REPORTS_DIR, filename)
+    if not os.path.exists(filepath):
+        return 'Report not found', 404
+    if filename.endswith('.pdf'):
+        return send_file(filepath, mimetype='application/pdf')
+    elif filename.endswith('.html'):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read(), 200, {'Content-Type': 'text/html; charset=utf-8'}
+    return 'Unsupported format', 400
+
 @app.route('/reports/delete/<filename>')
 @login_required
 def delete_report(filename):
     filepath = os.path.join(REPORTS_DIR, filename)
-    if os.path.exists(filepath) and filename.endswith('.pdf'):
+    if os.path.exists(filepath) and (filename.endswith('.pdf') or filename.endswith('.html')):
         os.remove(filepath)
     return redirect(url_for('reports'))
 

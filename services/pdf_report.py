@@ -435,12 +435,12 @@ def generate_global_report(snapshot_data, output_dir, include=None):
 
 
 def list_reports(output_dir):
-    """List all generated PDF reports with metadata."""
+    """List all generated reports (PDF and HTML) with metadata."""
     if not os.path.exists(output_dir):
         return []
     reports = []
     for filename in sorted(os.listdir(output_dir), reverse=True):
-        if filename.endswith('.pdf'):
+        if filename.endswith('.pdf') or filename.endswith('.html'):
             filepath = os.path.join(output_dir, filename)
             stat = os.stat(filepath)
             size_kb = round(stat.st_size / 1024, 1)

@@ -110,7 +110,11 @@
                 {% for report in report_history %}
                 <tr>
                     <td>
+                        {% if report.filename.endswith('.pdf') %}
                         <i class="bx bxs-file-pdf text-danger me-2"></i>
+                        {% else %}
+                        <i class="bx bxs-file-html text-primary me-2"></i>
+                        {% endif %}
                         <strong>{{ report.filename }}</strong>
                     </td>
                     <td>
@@ -255,10 +259,12 @@ function fetchPdf(country, selected) {
     params.set('country', country);
     selected.forEach(s => params.append('include', s));
 
-    // Open report in new tab - user clicks "Save as PDF" there
+    // Open report in new tab and save server-side
     window.open(`/reports/download?${params.toString()}`, '_blank');
     resetBtn();
     hideProgress();
+    // Refresh the page after a short delay to update the history
+    setTimeout(() => { window.location.reload(); }, 2000);
 }
 
 function resetBtn() {
